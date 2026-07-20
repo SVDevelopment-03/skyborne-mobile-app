@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "398904495705",
+    "project_id": "skyborne-bb7ad",
+    "storage_bucket": "skyborne-bb7ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:398904495705:android:5fdaf4aceba4ebaf1f6b48",
+        "android_client_info": {
+          "package_name": "com.skyborne"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "398904495705-717jlpl5pujk9647l4n7t5sln975oj11.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.skyborne",
+            "certificate_hash": "18c54617941fd2574dfcbf27b352237f9028da22"
+          }
+        },
+        {
+          "client_id": "398904495705-knmt5b96mkdg8rh6qqbmdl86qtsp13hu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvg6nO3JCV16orNDphia02mxbd644MkK0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "398904495705-knmt5b96mkdg8rh6qqbmdl86qtsp13hu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "398904495705-5sfusc2amh3d00j4nmno4iqmth1o68kr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "org.skybornedrop.tech"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

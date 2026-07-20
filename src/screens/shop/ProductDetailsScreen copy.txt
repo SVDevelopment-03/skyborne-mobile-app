@@ -1,0 +1,677 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { RootStackParamList } from '../../navigation/AppNavigator';
+import { Minus, ShoppingCart, Plus, ChevronLeft } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import { ShopProduct, shopService } from '../../services/shopService';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetails'>;
+
+const ProductDetailsScreen: React.FC<Props> = ({ navigation, route }) => {
+  const insets = useSafeAreaInsets();
+  const [product, setProduct] = useState<ShopProduct | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);
+  const [adding, setAdding] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'description' | 'specs'>(
+    'description',
+  );
+
+  const { productId } = route.params;
+
+  const loadCart = useCallback(async () => {
+    try {
+      const cart = await shopService.getMyCart();
+      setCartCount(cart?.items?.length ?? 0);
+      const cartItem = cart?.items?.find(item => item.product === productId);
+      setQuantity(cartItem?.quantity ?? 0);
+    } catch {
+      setCartCount(0);
+      setQuantity(0);
+    }
+  }, [productId]);
+
+  const loadProduct = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await shopService.getProductById(productId);
+      setProduct(data);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to load product',
+        text2: error?.response?.data?.message ?? error?.message,
+      });
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  }, [productId, navigation]);
+
+  useEffect(() => {
+    loadProduct();
+    loadCart();
+  }, [loadProduct, loadCart]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCart();
+    }, [loadCart]),
+  );
+
+  const handleAddToCart = async () => {
+    if (!product) {
+      return;
+    }
+    try {
+      setAdding(true);
+
+      if (quantity <= 0) {
+        await shopService.removeCartItem(product._id);
+        await loadCart();
+        Toast.show({ type: 'success', text1: 'Product removed from cart' });
+        return;
+      }
+
+      const currentCartItem = (await shopService.getMyCart()).items.find(
+        item => item.product === product._id,
+      );
+
+      if (currentCartItem) {
+        await shopService.updateCartItem(product._id, quantity);
+      } else {
+        await shopService.addToCart({ productId: product._id, quantity });
+      }
+
+      await loadCart();
+      Toast.show({ type: 'success', text1: 'Product added to cart' });
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Add to cart failed',
+        text2: error?.response?.data?.message ?? error?.message,
+      });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDecrementQuantity = async () => {
+    if (!product || adding) {
+      return;
+    }
+
+    if (quantity <= 0) {
+      return;
+    }
+
+    const nextQty = quantity - 1;
+
+    if (nextQty <= 0) {
+      try {
+        setAdding(true);
+        setQuantity(nextQty);
+        await shopService.removeCartItem(product._id);
+        await loadCart();
+        Toast.show({ type: 'success', text1: 'Product removed from cart' });
+      } catch (error: any) {
+        setQuantity(quantity);
+        Toast.show({
+          type: 'error',
+          text1: 'Remove failed',
+          text2: error?.response?.data?.message ?? error?.message,
+        });
+      } finally {
+        setAdding(false);
+      }
+      return;
+    }
+
+    setQuantity(nextQty);
+  };
+
+  const categoryLabel = (() => {
+    if (!product?.category) return '';
+    
+    // Handle if category is an object with name or title
+    if (typeof product.category === 'object') {
+      const category = product.category as any;
+      return category?.title || category?.name || '';
+    }
+    
+    // Handle if category is a string (ID)
+    if (typeof product.category === 'string') {
+      return '';
+    }
+    
+    return '';
+  })();
+
+  const specifications = Array.isArray(product?.specifications)
+    ? product.specifications
+    : [];
+  const shippingInfo =
+    typeof product?.shippingInfo === 'string' ? product.shippingInfo.trim() : '';
+  const reviews = Array.isArray(product?.reviews) ? product.reviews : [];
+
+  const getInitials = (name?: string) => {
+    const text = (name || 'Anonymous').trim();
+    if (!text) return 'A';
+    const parts = text.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+    return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase();
+  };
+
+  const getRatingStars = (rating?: number) => {
+    const safeRating = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+    return `${'★'.repeat(safeRating)}${'☆'.repeat(5 - safeRating)}`;
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loaderWrap}>
+          <ActivityIndicator size="large" color="#B95E82" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!product) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loaderWrap}>
+          <Text style={styles.emptyText}>Product not found.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
+          <ChevronLeft color="#494949" size={20} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Product Details</Text>
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={() => navigation.navigate('Cart')}
+        >
+          <ShoppingCart color="#494949" size={20} />
+          {cartCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{cartCount > 9 ? '9+' : cartCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 300 + insets.bottom },
+        ]}
+      >
+        <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
+
+        {!!categoryLabel && (
+          <View style={styles.categoryPill}>
+            <Text style={styles.categoryPillText}>{categoryLabel}</Text>
+          </View>
+        )}
+
+        <Text style={styles.name}>{product.name}</Text>
+        <View style={styles.priceQtyRow}>
+          <Text style={styles.price}>${product.price}</Text>
+          <View style={styles.qtyInlineWrap}>
+            <Text style={styles.qtyLabelInline}>Qty</Text>
+            <View style={styles.qtyControls}>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={handleDecrementQuantity}
+              >
+                <Minus color="#494949" size={18} />
+              </TouchableOpacity>
+              <Text style={styles.qtyValue}>{quantity}</Text>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={() => setQuantity(prev => prev + 1)}
+              >
+                <Plus color="#494949" size={18} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.tabsWrap}>
+          <View style={styles.tabsRow}>
+            {[
+              { key: 'description', label: 'Description' },
+              { key: 'specs', label: 'Specifications' },
+            ].map(tab => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[
+                  styles.tabBtn,
+                  activeTab === tab.key && styles.tabBtnActive,
+                ]}
+                onPress={() =>
+                  setActiveTab(
+                    tab.key as 'description' | 'specs',
+                  )
+                }
+              >
+                <Text
+                  style={[
+                    styles.tabBtnText,
+                    activeTab === tab.key && styles.tabBtnTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.tabContentWrap}>
+            {activeTab === 'description' && (
+              <Text style={styles.desc}>
+                {product.description || 'No additional description available.'}
+              </Text>
+            )}
+
+            {activeTab === 'specs' && (
+              specifications.length > 0 ? (
+                <View style={styles.specsWrap}>
+                  {specifications.map((spec, idx) => (
+                    <View key={`${spec.label || 'spec'}-${idx}`} style={styles.specRow}>
+                      <Text style={styles.specLabel}>{spec.label || '-'}</Text>
+                      <Text style={styles.specValue}>{spec.value || '-'}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.desc}>No specifications available.</Text>
+              )
+            )}
+
+          </View>
+        </View>
+
+        <View style={styles.shippingSection}>
+          <Text style={styles.shippingTitle}>Shipping Info</Text>
+          <Text style={styles.desc}>
+            {shippingInfo || 'No shipping information available.'}
+          </Text>
+        </View>
+
+        <View style={styles.reviewsSection}>
+          <Text style={styles.reviewsTitle}>Reviews</Text>
+          {reviews.length > 0 ? (
+            <View style={styles.reviewsWrap}>
+              {reviews.map((review, idx) => (
+                <View key={`${review.name || 'review'}-${idx}`} style={styles.reviewCard}>
+                  <View style={styles.reviewHead}>
+                    <View style={styles.reviewerWrap}>
+                      <View style={styles.reviewerAvatar}>
+                        <Text style={styles.reviewerAvatarText}>
+                          {getInitials(review.name)}
+                        </Text>
+                      </View>
+                      <Text style={styles.reviewName}>{review.name || 'Anonymous'}</Text>
+                    </View>
+                    {typeof review.rating === 'number' && (
+                      <Text style={styles.reviewRating}>
+                        {getRatingStars(review.rating)} {Math.max(0, Math.min(5, Math.round(review.rating)))} / 5
+                      </Text>
+                    )}
+                  </View>
+                  {!!review.comment && (
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                  )}
+                  {!!review.createdAt && (
+                    <Text style={styles.reviewDate}>
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.desc}>No reviews yet.</Text>
+          )}
+        </View>
+      </ScrollView>
+
+      <View style={[styles.bottomCta, { paddingBottom: 40 + insets.bottom }]}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          disabled={adding}
+          onPress={handleAddToCart}
+        >
+          {adding ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.addBtnText}>Add to Cart</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  loaderWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyText: {
+    fontSize: 16,
+    color: '#707070',
+    fontFamily: 'Satoshi-Medium',
+  },
+  header: {
+    marginTop: Platform.OS === 'android' ? 40 : 36,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    color: '#494949',
+    fontFamily: 'Satoshi-Bold',
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#B95E82',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+  image: {
+    width: '100%',
+    height: 320,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F2',
+  },
+  categoryPill: {
+    marginTop: 14,
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#FFE8E8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  categoryPillText: {
+    color: '#B95E82',
+    fontSize: 12,
+    fontFamily: 'Satoshi-Medium',
+  },
+  name: {
+    marginTop: 10,
+    fontSize: 28,
+    color: '#494949',
+    fontFamily: 'Satoshi-Bold',
+  },
+  priceQtyRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  price: {
+    fontSize: 26,
+    color: '#B95E82',
+    fontFamily: 'Satoshi-Bold',
+    flexShrink: 1,
+  },
+  qtyInlineWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  qtyLabelInline: {
+    fontSize: 14,
+    color: '#494949',
+    fontFamily: 'Satoshi-Medium',
+  },
+  desc: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#707070',
+    fontFamily: 'Satoshi-Regular',
+  },
+  tabsWrap: {
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+    overflow: 'hidden',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F2',
+    backgroundColor: '#FAFAFA',
+  },
+  tabBtn: {
+    width: '50%',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBtnActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  tabBtnText: {
+    fontSize: 13,
+    color: '#707070',
+    fontFamily: 'Satoshi-Medium',
+  },
+  tabBtnTextActive: {
+    color: '#B95E82',
+    fontFamily: 'Satoshi-Bold',
+  },
+  tabContentWrap: {
+    padding: 14,
+    gap: 10,
+  },
+  specsWrap: {
+    gap: 10,
+  },
+  specRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F2',
+    paddingBottom: 8,
+  },
+  specLabel: {
+    flex: 1,
+    color: '#707070',
+    fontSize: 14,
+    fontFamily: 'Satoshi-Medium',
+  },
+  specValue: {
+    flex: 1,
+    color: '#494949',
+    fontSize: 14,
+    textAlign: 'right',
+    fontFamily: 'Satoshi-Bold',
+  },
+  reviewsWrap: {
+    gap: 12,
+  },
+  reviewCard: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F2',
+    paddingBottom: 10,
+  },
+  reviewHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reviewerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
+  },
+  reviewerAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F4D7E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewerAvatarText: {
+    color: '#B95E82',
+    fontSize: 12,
+    fontFamily: 'Satoshi-Bold',
+  },
+  reviewName: {
+    color: '#494949',
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    flexShrink: 1,
+  },
+  reviewRating: {
+    color: '#F2B01E',
+    fontSize: 14,
+    letterSpacing: 1,
+    fontFamily: 'Satoshi-Bold',
+  },
+  reviewComment: {
+    marginTop: 6,
+    color: '#707070',
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Satoshi-Regular',
+  },
+  reviewDate: {
+    marginTop: 6,
+    color: '#9B9B9B',
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+  },
+  reviewsSection: {
+    marginTop: 22,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+    padding: 14,
+  },
+  reviewsTitle: {
+    color: '#494949',
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+    marginBottom: 10,
+  },
+  shippingSection: {
+    marginTop: 22,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+    padding: 14,
+  },
+  shippingTitle: {
+    color: '#494949',
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+    marginBottom: 10,
+  },
+  qtyControls: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+    padding: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  qtyBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8F8F8',
+  },
+  qtyValue: {
+    width: 56,
+    textAlign: 'center',
+    color: '#494949',
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+  },
+  bottomCta: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#ECECEC',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  addBtn: {
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#B95E82',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+  },
+});
+
+export default ProductDetailsScreen;

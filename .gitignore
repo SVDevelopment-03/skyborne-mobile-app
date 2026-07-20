@@ -1,0 +1,51 @@
+# node
+node_modules/
+package-lock.json
+
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+
+# React Native Android generated assets
+android/app/src/main/res/drawable-*
+android/app/src/main/res/raw/
+android/app/build/
+android/.gradle/
+
+
+# Android generated resources (React Native)
+android/app/src/main/res/drawable-*
+android/app/src/main/res/raw/
+
+# In case of duplicated android/android path
+android/android/app/src/main/res/drawable-*
+android/android/app/src/main/res/raw/
+
+# Android build folders
+android/app/build/
+android/android/app/build/
+android/.gradle/
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace
+
+# Env
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+android/app/.cxx/
+skyborne-bb7ad-firebase-adminsdk-fbsvc-978ce4499e.json
+firebase.json
+google-services (2).json

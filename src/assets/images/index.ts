@@ -1,0 +1,18 @@
+export const Images = {
+  pricingIllustration1:'https://skyborne-images.s3.ap-south-1.amazonaws.com/pricing_illustration1.png',
+  pricingIllustration2: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/pricing_illustration2.png',
+  crossIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/cross_icon.png',
+  sessionHistory: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/sessionHistory.png',
+  flower: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/flower.png',
+  sandWatch: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/sandwatch.png',
+  calendarIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/calendar.png',
+  whatsappIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/whatsappIcon.png',
+  questionIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/questionIcon.png',
+  emailIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/emailIcon.png',
+  rightIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/Right.png',
+  energizedIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/EnergizedIcon.png',
+  relaxedIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/RelaxedIcon.png',
+  strongIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/StrongIcon.png',
+  tiredIcon: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/TiredIcon.png',
+  starIcon:'https://skyborne-images.s3.ap-south-1.amazonaws.com/starIcon.png',
+};

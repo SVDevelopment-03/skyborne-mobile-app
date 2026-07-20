@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Default: Trust system certificates -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Development/Testing APIs - allow cleartext + self-signed certs -->
+        <domain includeSubdomains="true">svdevelopment-03-skyborne-backend.onrender.com</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        
+        <!-- Trust custom CA certs for dev APIs -->
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- Google Sign-In & APIs -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">accounts.google.com</domain>
+        <domain includeSubdomains="true">googleapis.com</domain>
+        <domain includeSubdomains="true">gstatic.com</domain>
+        <domain includeSubdomains="true">google.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+    <!-- AWS S3 for images -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">skyborne-images.s3.ap-south-1.amazonaws.com</domain>
+        <domain includeSubdomains="true">amazonaws.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
