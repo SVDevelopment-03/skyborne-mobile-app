@@ -1,7 +1,3 @@
-// TODO: COMMENTED OUT - UPGRADE PLAN FUNCTIONALITY DISABLED
-// This entire UpgradePlan screen is disabled and not accessible from the app.
-// The screen and all its functionality are preserved for future re-enabling.
-
 // screens/onboarding/PricingScreen.tsx - FIXED: Correct Pricing for Each Plan
 
 import React, { useState, useEffect } from 'react';
@@ -29,6 +25,7 @@ import {
   clearPaymentCache,
   upgradePlanOrder,
 } from '../../services/paymentService';
+import { profileService } from '../../services/profileService';
 import SocketService from '../../services/socketService';
 import { fetchUserProfile } from '../../store/homeSlice';
 import { RootState } from '../../store';
@@ -36,6 +33,57 @@ import { SubscriptionImages } from '../../assets/images/subscriptions';
 import { API_BASE_URL as APP_API_BASE_URL } from '../../constants/api';
 
 const API_BASE_URL = APP_API_BASE_URL;
+
+interface ApiPlan {
+  _id?: string;
+  uuid?: string;
+  name?: string;
+  price?: number | string;
+  monthlyPrice?: number | string;
+  yearlyPrice?: number | string;
+  annualPrice?: number | string;
+  description?: string;
+  features?: string[];
+  services?: string[];
+  classCountPerMonth?: number;
+  serviceClassCounts?: Array<{
+    service: string;
+    classCountPerMonth: number;
+  }>;
+}
+
+const getPlanServiceText = (
+  apiPlan?: ApiPlan,
+  billingType: 'monthly' | 'yearly' = 'monthly',
+) => {
+  if (!apiPlan) return null;
+
+  if (apiPlan.serviceClassCounts?.length) {
+    const serviceText = apiPlan.serviceClassCounts
+      .map((item) => `${item.classCountPerMonth} ${item.service}`)
+      .join(' + ');
+
+    return billingType === 'monthly'
+      ? `${serviceText} per Month`
+      : `${serviceText} per Year`;
+  }
+
+  if (apiPlan.classCountPerMonth) {
+    return billingType === 'monthly'
+      ? `${apiPlan.classCountPerMonth} Classes per Month`
+      : `${apiPlan.classCountPerMonth * 12} Classes per Year`;
+  }
+
+  if (apiPlan.services?.length) {
+    return apiPlan.services.join(' + ');
+  }
+
+  if (apiPlan.features?.length) {
+    return apiPlan.features[0];
+  }
+
+  return null;
+};
 
 // ✅ COMPLETE PLAN CONFIGURATION WITH MONTHLY/YEARLY PRICING
 const PLAN_CONFIG = {
@@ -106,6 +154,8 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
 
   const insets = useSafeAreaInsets();
   const [selectedPlan, setSelectedPlan] = useState('gold-yoga');
+  const [plans, setPlans] = useState<ApiPlan[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [showGoldModal, setShowGoldModal] = useState(false);
   const [selectedGoldOption, setSelectedGoldOption] = useState<number | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -123,10 +173,73 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
   const email = useSelector((state: RootState) => state.auth.email);
   const phone = useSelector((state: RootState) => state.auth.phone);
 
+  const formatPlanAmount = (value: number | string | undefined) => {
+    const numericValue = Number(value || 0);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+  };
+
+  const formatCurrency = (amount: number) =>
+    `$${amount.toLocaleString(undefined, {
+      maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    })}`;
+
+  const getPlanKey = (plan?: ApiPlan, fallbackIndex = 0) => {
+    const normalizedName = String(plan?.name || '').toLowerCase();
+
+    if (normalizedName.includes('gold')) return 'gold';
+    if (normalizedName.includes('diamond')) return 'diamond';
+    if (normalizedName.includes('platinum')) return 'platinum';
+
+    return ['gold', 'diamond', 'platinum'][fallbackIndex % 3] || 'diamond';
+  };
+
+  const getSelectedPlanKey = (planId: string) =>
+    planId.includes('gold') ? 'gold' : planId;
+
+  const getPlanPrice = (
+    plan?: ApiPlan,
+    billingType: 'monthly' | 'yearly' = 'monthly',
+  ) => {
+    const monthlyAmount = formatPlanAmount(
+      plan?.monthlyPrice ?? plan?.price,
+    );
+    const yearlyAmount = formatPlanAmount(
+      plan?.yearlyPrice ?? plan?.annualPrice ?? monthlyAmount * 12,
+    );
+
+    return billingType === 'monthly' ? monthlyAmount : yearlyAmount;
+  };
+
   useEffect(() => {
     if (user?.id) {
       SocketService.connect(API_BASE_URL, user.id);
     }
+
+    const loadPlans = async () => {
+      try {
+        setIsLoadingPlans(true);
+        const response = await profileService.getPlans();
+        const apiPlans =
+          response?.data?.data || response?.data?.plans || response?.data || [];
+
+        if (Array.isArray(apiPlans)) {
+          setPlans(apiPlans);
+          const firstPlan = apiPlans[0];
+          if (firstPlan) {
+            setSelectedPlan(getPlanKey(firstPlan, 0));
+          }
+        } else {
+          setPlans([]);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load upgrade plans:', error);
+        setPlans([]);
+      } finally {
+        setIsLoadingPlans(false);
+      }
+    };
+
+    loadPlans();
 
     return () => {
       if (paymentTimeout) clearTimeout(paymentTimeout);
@@ -333,35 +446,38 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
   /**
    * ✅ FIXED: Get plan details - Properly handles Gold, Diamond, and Platinum
    */
-  const getPlanDetails = (planId: string) => {
+  const getPlanDetails = (planId: string, apiPlan?: ApiPlan) => {
     // Determine which plan config to use
     let baseConfig: any;
     
     if (planId === 'gold-yoga' || planId === 'gold-mixed' || planId === 'gold-zumba') {
-      // Gold plan - use GOLD config
       baseConfig = PLAN_CONFIG.gold;
     } else if (planId === 'diamond') {
-      // Diamond plan - use DIAMOND config
       baseConfig = PLAN_CONFIG.diamond;
     } else if (planId === 'platinum') {
-      // Platinum plan - use PLATINUM config
       baseConfig = PLAN_CONFIG.platinum;
     } else {
-      // Fallback
       baseConfig = PLAN_CONFIG.gold;
     }
 
     // Get pricing based on selected billing type
-    const pricing = billingType === 'monthly' ? baseConfig.monthly : baseConfig.yearly;
+    const amount = apiPlan ? getPlanPrice(apiPlan, billingType) : (billingType === 'monthly' ? baseConfig.monthly.amount : baseConfig.yearly.amount);
+    const price = apiPlan
+      ? `${formatCurrency(amount)}/${billingType === 'monthly' ? 'Month' : 'Year'}`
+      : (billingType === 'monthly' ? baseConfig.monthly.display : baseConfig.yearly.display);
+
+    const sessions =
+      getPlanServiceText(apiPlan, billingType) ||
+      (billingType === 'monthly' ? baseConfig.monthly.sessions : baseConfig.yearly.sessions);
 
     return {
       id: planId.includes('gold') ? 'gold' : planId,
-      name: baseConfig.name,
+      name: apiPlan?.name || baseConfig.name,
       badge: baseConfig.badge,
-      amount: pricing.amount,
-      price: pricing.display,
-      sessions: pricing.sessions,
-      savings: pricing.savings || null,
+      amount,
+      price,
+      sessions,
+      savings: billingType === 'yearly' ? baseConfig.yearly.savings || null : null,
     };
   };
 
@@ -397,7 +513,11 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
         return;
       }
 
-      const planDetails = getPlanDetails(selectedPlan);
+      const selectedPlanKey = getSelectedPlanKey(selectedPlan);
+      const selectedApiPlan = plans.find(
+        plan => getPlanKey(plan) === selectedPlanKey,
+      );
+      const planDetails = getPlanDetails(selectedPlan, selectedApiPlan);
       if (!planDetails) {
         Toast.show({
           type: 'error',
@@ -508,10 +628,9 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
   /**
    * ✅ FIXED PlanCard Component
    */
-  const PlanCard = ({ plan, planKey, isSelected, onPress }: any) => {
-    // Get details using the plan key (gold, diamond, platinum)
-    const details = getPlanDetails(planKey);
-    
+  const PlanCard = ({ apiPlan, planKey, isSelected, onPress }: any) => {
+    const details = getPlanDetails(planKey, apiPlan);
+
     return (
       <TouchableOpacity
         style={[styles.planCard, isSelected && styles.selectedPlanCard]}
@@ -520,7 +639,7 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
         activeOpacity={0.7}
       >
         <View style={styles.planLeft}>
-          <Text style={styles.planName}>{plan.name}</Text>
+          <Text style={styles.planName}>{details.name}</Text>
           <Text style={styles.planSessions}>{details.sessions}</Text>
         </View>
         <View style={styles.planRight}>
@@ -529,7 +648,7 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
             <Text style={styles.savingsBadge}>✓ Save {details.savings}</Text>
           )}
         </View>
-        {plan.badge && (
+        {details.badge && (
           <View
             style={[
               styles.badge,
@@ -542,7 +661,7 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
                 isSelected ? styles.premiumBadgeText : styles.valueBadgeText,
               ]}
             >
-              {plan.badge}
+              {details.badge}
             </Text>
           </View>
         )}
@@ -677,15 +796,36 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
 
             {/* ✅ FIXED Plans List */}
             <View style={styles.planList}>
-              {Object.entries(PLAN_CONFIG).map(([key, plan]) => (
-                <PlanCard
-                  key={key}
-                  plan={plan}
-                  planKey={key}
-                  isSelected={selectedPlan === key || (key === 'gold' && selectedPlan.includes('gold'))}
-                  onPress={() => handlePlanSelect(key)}
-                />
-              ))}
+              {isLoadingPlans ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#B95E82" />
+                </View>
+              ) : plans.length > 0 ? (
+                plans.map((plan, index) => {
+                  const planKey = getPlanKey(plan, index);
+                  return (
+                    <PlanCard
+                      key={plan.uuid || plan._id || `${planKey}-${index}`}
+                      planKey={planKey}
+                      apiPlan={plan}
+                      isSelected={
+                        selectedPlan === planKey ||
+                        (planKey === 'gold' && selectedPlan.includes('gold'))
+                      }
+                      onPress={() => handlePlanSelect(planKey)}
+                    />
+                  );
+                })
+              ) : (
+                Object.entries(PLAN_CONFIG).map(([key, plan]) => (
+                  <PlanCard
+                    key={key}
+                    planKey={key}
+                    isSelected={selectedPlan === key || (key === 'gold' && selectedPlan.includes('gold'))}
+                    onPress={() => handlePlanSelect(key)}
+                  />
+                ))
+              )}
             </View>
 
             {/* Info Text */}

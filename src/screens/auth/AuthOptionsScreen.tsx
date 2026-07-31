@@ -367,16 +367,16 @@ export default function AuthOptionsScreen({ navigation }: Props) {
               Login
             </ThemedText>
           </TouchableOpacity>
-
+          //TODO: Uncomment the below code to enable signup button in the future
           {/* COMMENTED OUT - SIGNUP BUTTON HIDDEN */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.signupButton}
             onPress={() => navigation.navigate('Signup')}
           >
             <ThemedText style={styles.signupText}>
               Signup
             </ThemedText>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
         </View>
 
         <ThemedText style={styles.legalText}>

@@ -28,8 +28,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import EditProfileScreen from '../screens/home/EditProfileScreen';
 import ClassDetailsScreen from '../screens/home/ClassDetailScreen';
 import ViewAll from '../screens/home/ViewAll';
-// TODO: COMMENTED OUT - UPGRADE PLAN FUNCTIONALITY DISABLED
-// import UpgradePlanScreen from '../screens/home/UpgradePlan';
+import UpgradePlanScreen from '../screens/home/UpgradePlan';
 import GuestScreen from '../screens/home/GuestScreen';
 import PaymentHistory from '../screens/home/PaymentHistory';
 import YogaDetailsScreen from '../screens/home/YogaDetail';
@@ -92,8 +91,7 @@ export type RootStackParamList = {
   PaymentVerification: undefined;
   Login: undefined;
   EditProfile: undefined;
-  // TODO: COMMENTED OUT - UPGRADE PLAN FUNCTIONALITY DISABLED
-  // UpgradePlan: undefined;
+  UpgradePlan: undefined;
   // Forgot Password routes
   ForgotPasswordEmail: undefined;
   ForgotPasswordOTP: { email: string };
@@ -178,8 +176,7 @@ export default function AppNavigator() {
         />
         <Stack.Screen name="ClassDetails" component={ClassDetailsScreen} />
         <Stack.Screen name="SessionHistory" component={SessionHistoryScreen} />
-        {/* TODO: COMMENTED OUT - UPGRADE PLAN FUNCTIONALITY DISABLED */}
-        {/* <Stack.Screen name="UpgradePlan" component={UpgradePlanScreen} /> */}
+        <Stack.Screen name="UpgradePlan" component={UpgradePlanScreen} />
         <Stack.Screen name="GuestHome" component={GuestScreen} />
         <Stack.Screen name="PaymentHistory" component={PaymentHistory} />
         <Stack.Screen name="YogaDetails" component={YogaDetailsScreen} />

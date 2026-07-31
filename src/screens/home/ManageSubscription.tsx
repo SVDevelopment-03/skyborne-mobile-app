@@ -256,13 +256,12 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
   };
 
   const settingOptions: SettingOption[] = [
-    // TODO: COMMENTED OUT - UPGRADE PLAN FUNCTIONALITY DISABLED
-    // {
-    //   id: 1,
-    //   title: 'Upgrade Plan',
-    //   icon: SubscriptionImages.upgradeIcon,
-    //   page: 'UpgradePlan',
-    // },
+    {
+      id: 1,
+      title: 'Upgrade Plan',
+      icon: SubscriptionImages.upgradeIcon,
+      page: 'UpgradePlan',
+    },
     ...(canEditCard
       ? [
           {

@@ -30,8 +30,20 @@ import { RootState } from '../../store';
 import { SubscriptionImages } from '../../assets/images/subscriptions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL as APP_API_BASE_URL } from '../../constants/api';
+import { profileService } from '../../services/profileService';
 
 const API_BASE_URL = APP_API_BASE_URL;
+
+interface ApiPlan {
+  _id?: string;
+  uuid?: string;
+  name?: string;
+  price?: number | string;
+  yearlyPrice?: number | string;
+  annualPrice?: number | string;
+  description?: string;
+  features?: string[];
+}
 
 // ✅ PLAN CONFIG WITH MONTHLY/YEARLY PRICING
 const PLAN_CONFIG = {
@@ -129,6 +141,8 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
   const [showGoldModal, setShowGoldModal] = useState(false);
   const [selectedGoldOption, setSelectedGoldOption] = useState<number | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [plans, setPlans] = useState<ApiPlan[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [isListeningForPayment, setIsListeningForPayment] = useState(false);
   const [paymentTimeout, setPaymentTimeout] = useState<NodeJS.Timeout | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
@@ -143,10 +157,59 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
   const email = useSelector((state: RootState) => state.auth.email);
   const phone = useSelector((state: RootState) => state.auth.phone);
 
+  const formatPlanAmount = (value: number | string | undefined) => {
+    const numericValue = Number(value || 0);
+    return Number.isFinite(numericValue) ? numericValue : 0;
+  };
+
+  const getPlanKey = (plan?: ApiPlan, fallbackIndex = 0) => {
+    const normalizedName = String(plan?.name || '').toLowerCase();
+
+    if (normalizedName.includes('gold')) return 'gold';
+    if (normalizedName.includes('diamond')) return 'diamond';
+    if (normalizedName.includes('platinum')) return 'platinum';
+
+    return ['gold', 'diamond', 'platinum'][fallbackIndex % 3] || 'diamond';
+  };
+
+  const getPlanPrice = (plan?: ApiPlan, billingType: 'monthly' | 'yearly' = 'monthly') => {
+    const monthlyAmount = formatPlanAmount(plan?.price);
+    const yearlyAmount = formatPlanAmount(
+      plan?.yearlyPrice ?? plan?.annualPrice ?? monthlyAmount * 12,
+    );
+
+    return billingType === 'monthly' ? monthlyAmount : yearlyAmount;
+  };
+
   useEffect(() => {
     if (user?.id) {
       SocketService.connect(API_BASE_URL, user.id);
     }
+
+    const loadPlans = async () => {
+      try {
+        setIsLoadingPlans(true);
+        const response = await profileService.getPlans();
+        const apiPlans = response?.data?.data || response?.data?.plans || response?.data || [];
+
+        if (Array.isArray(apiPlans)) {
+          setPlans(apiPlans);
+          const firstPlan = apiPlans.find((plan: ApiPlan) => !!plan?.name);
+          if (firstPlan) {
+            setSelectedPlan(getPlanKey(firstPlan));
+          }
+        } else {
+          setPlans([]);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load plans:', error);
+        setPlans([]);
+      } finally {
+        setIsLoadingPlans(false);
+      }
+    };
+
+    loadPlans();
 
     return () => {
       if (paymentTimeout) clearTimeout(paymentTimeout);
@@ -329,13 +392,14 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
   /**
    * Get plan details based on billing type
    */
-  const getPlanDetails = (planKey: string) => {
+  const getPlanDetails = (planKey: string, apiPlan?: ApiPlan) => {
     let baseConfig: any;
 
     if (
       planKey === 'gold-yoga' ||
       planKey === 'gold-mixed' ||
-      planKey === 'gold-zumba'
+      planKey === 'gold-zumba' ||
+      planKey === 'gold'
     ) {
       baseConfig = PLAN_CONFIG.gold;
     } else if (planKey === 'diamond') {
@@ -348,16 +412,22 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
 
     const pricing =
       billingType === 'monthly' ? baseConfig.monthly : baseConfig.yearly;
+    const amount = apiPlan ? getPlanPrice(apiPlan, billingType) : pricing.amount;
+    const display = apiPlan
+      ? `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+      : pricing.display;
+    const period = billingType === 'monthly' ? 'Month' : 'Year';
+    const sessions = apiPlan?.description || apiPlan?.features?.[0] || pricing.sessions;
 
     return {
       id: planKey.includes('gold') ? 'gold' : planKey,
-      name: baseConfig.name,
+      name: apiPlan?.name || baseConfig.name,
       badge: baseConfig.badge,
-      amount: pricing.amount,
-      price: pricing.display,
-      period: pricing.period,
-      sessions: pricing.sessions,
-      savings: pricing.savings || null,
+      amount,
+      price: display,
+      period,
+      sessions,
+      savings: billingType === 'yearly' ? pricing.savings || null : null,
     };
   };
 
@@ -408,7 +478,8 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
         return;
       }
 
-      const planDetails = getPlanDetails(selectedPlan);
+      const selectedApiPlan = plans.find((plan) => getPlanKey(plan) === selectedPlan);
+      const planDetails = getPlanDetails(selectedPlan, selectedApiPlan);
       if (!planDetails) {
         Toast.show({
           type: 'error',
@@ -520,8 +591,8 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
   /**
    * PlanCard Component
    */
-  const PlanCard = ({ plan, planKey, isSelected, onPress }: any) => {
-    const details = getPlanDetails(planKey);
+  const PlanCard = ({ planKey, apiPlan, isSelected, onPress }: any) => {
+    const details = getPlanDetails(planKey, apiPlan);
 
     return (
       <TouchableOpacity
@@ -531,7 +602,7 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
         activeOpacity={0.7}
       >
         <View style={styles.planLeft}>
-          <Text style={styles.planName}>{plan.name}</Text>
+          <Text style={styles.planName}>{details.name}</Text>
           <Text style={styles.planDesc}>{details.sessions}</Text>
         </View>
 
@@ -545,7 +616,7 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
           )}
         </View>
 
-        {plan.badge && (
+        {details.badge && (
           <View
             style={[
               styles.badge,
@@ -558,7 +629,7 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
                 isSelected ? styles.premiumBadgeText : styles.valueBadgeText,
               ]}
             >
-              {plan.badge}
+              {details.badge}
             </Text>
           </View>
         )}
@@ -678,18 +749,41 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
 
             {/* Plans List */}
             <View style={styles.planList}>
-              {Object.entries(PLAN_CONFIG).map(([key, plan]) => (
-                <PlanCard
-                  key={key}
-                  plan={plan}
-                  planKey={key}
-                  isSelected={
-                    selectedPlan === key ||
-                    (key === 'gold' && selectedPlan === 'gold')
-                  }
-                  onPress={() => handlePlanSelect(key)}
-                />
-              ))}
+              {isLoadingPlans ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#B95E82" />
+                </View>
+              ) : plans.length > 0 ? (
+                plans.map((plan, index) => {
+                  const key = getPlanKey(plan, index);
+
+                  return (
+                    <PlanCard
+                      key={plan.uuid || plan._id || `${key}-${index}`}
+                      planKey={key}
+                      apiPlan={plan}
+                      isSelected={
+                        selectedPlan === key ||
+                        (key === 'gold' && selectedPlan === 'gold')
+                      }
+                      onPress={() => handlePlanSelect(key)}
+                    />
+                  );
+                })
+              ) : (
+                Object.entries(PLAN_CONFIG).map(([key, plan]) => (
+                  <PlanCard
+                    key={key}
+                    planKey={key}
+                    apiPlan={undefined}
+                    isSelected={
+                      selectedPlan === key ||
+                      (key === 'gold' && selectedPlan === 'gold')
+                    }
+                    onPress={() => handlePlanSelect(key)}
+                  />
+                ))
+              )}
             </View>
           </View>
         </ScrollView>
@@ -862,6 +956,11 @@ const styles = StyleSheet.create({
   planList: {
     marginBottom: 24,
     gap: 12,
+  },
+  loadingContainer: {
+    minHeight: 72,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   planCard: {
     flexDirection: 'row',
