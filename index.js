@@ -5,14 +5,15 @@
 import { AppRegistry } from 'react-native';
 import App from './App';
 import { name as appName } from './app.json';
-import { getApps } from '@react-native-firebase/app';
+import { getApp, getApps } from '@react-native-firebase/app/lib/modular';
+import '@react-native-firebase/messaging';
+import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging/lib/modular';
 
-// Initialize Firebase and background message handler
-import messaging from '@react-native-firebase/messaging';
 
 if (getApps().length > 0) {
-	// Set up background message handler
-	messaging().setBackgroundMessageHandler(async remoteMessage => {
+	const app = getApp();
+
+	setBackgroundMessageHandler(getMessaging(app), async remoteMessage => {
 		const data = remoteMessage?.data || {};
 		const notificationType =
 			data.notificationType ||

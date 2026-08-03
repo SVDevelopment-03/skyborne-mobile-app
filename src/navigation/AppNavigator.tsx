@@ -91,7 +91,12 @@ export type RootStackParamList = {
   PaymentVerification: undefined;
   Login: undefined;
   EditProfile: undefined;
-  UpgradePlan: undefined;
+  UpgradePlan:
+    | {
+        from?: 'onboarding' | 'profile' | 'manageSubscription';
+        returnTo?: keyof RootStackParamList;
+      }
+    | undefined;
   // Forgot Password routes
   ForgotPasswordEmail: undefined;
   ForgotPasswordOTP: { email: string };

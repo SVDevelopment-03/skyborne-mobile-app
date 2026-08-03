@@ -1,4 +1,4 @@
-package com.skyborne
+package com.skyborne.drop
 
 import android.content.Intent
 import android.net.Uri

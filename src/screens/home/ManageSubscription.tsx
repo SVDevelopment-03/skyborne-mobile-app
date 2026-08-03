@@ -8,20 +8,22 @@ import {
   TouchableOpacity,
   Image,
   ImageSourcePropType,
-  Linking,
   Modal,
   TextInput,
 } from 'react-native';
+import { initPaymentSheet, presentPaymentSheet } from '@stripe/stripe-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SubscriptionImages } from '../../assets/images/subscriptions';
 import { useProfileViewModel } from '../../viewmodels/useProfileViewModel';
 import { useState, useEffect } from 'react';
 import { useBillingViewModel } from '../../viewmodels/useBillingViewModel';
 import {
-  createCardPortalSession,
+  createCardSetupIntent,
+  confirmCardSetupIntent,
   getStoredPaymentDetails,
   verifyPayment,
 } from '../../services/paymentService';
+import { profileService } from '../../services/profileService';
 import Toast from 'react-native-toast-message';
 
 interface BillingInfo {
@@ -36,6 +38,16 @@ interface SettingOption {
   iconSvgUri?: string;
   page?: string;
   onPress?: () => void;
+}
+
+interface ApiPlan {
+  _id?: string;
+  uuid?: string;
+  name?: string;
+  price?: number | string;
+  monthlyPrice?: number | string;
+  yearlyPrice?: number | string;
+  annualPrice?: number | string;
 }
 
 const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
@@ -54,6 +66,32 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
     useBillingViewModel();
 
   const [billingInfo, setBillingInfo] = useState<BillingInfo[]>([]);
+  const [plans, setPlans] = useState<ApiPlan[]>([]);
+
+  const getApiPlanKey = (planName?: string) => {
+    const normalized = String(planName || '').toLowerCase();
+    if (normalized.includes('gold-yoga')) return 'gold-yoga';
+    if (normalized.includes('gold-zumba')) return 'gold-zumba';
+    if (normalized.includes('gold-mixed')) return 'gold-mixed';
+    if (normalized.includes('diamond')) return 'diamond';
+    if (normalized.includes('platinum')) return 'platinum';
+    if (normalized.includes('gold')) return 'gold-mixed';
+    return normalized || '';
+  };
+
+  const getPlanPrice = (plan?: ApiPlan) => {
+    const planAmount = plan?.monthlyPrice ?? plan?.price ?? 0;
+    const numericAmount = Number(planAmount || 0);
+    return Number.isFinite(numericAmount) ? numericAmount : 0;
+  };
+
+  const currentPlanKey = getApiPlanKey(user?.plan);
+  const currentPlan = plans.find((plan) => {
+    const planName = String(plan?.name || '').toLowerCase();
+    const planKey = getApiPlanKey(planName);
+    return planKey === currentPlanKey;
+  });
+  const currentPlanAmount = currentPlan ? getPlanPrice(currentPlan) : null;
 
   useEffect(() => {
     const loadBilling = async () => {
@@ -62,6 +100,27 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
     };
 
     loadBilling();
+  }, []);
+
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const response = await profileService.getPlans();
+        const apiPlans =
+          response?.data?.data || response?.data?.plans || response?.data || [];
+
+        if (Array.isArray(apiPlans)) {
+          setPlans(apiPlans);
+        } else {
+          setPlans([]);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load plans:', error);
+        setPlans([]);
+      }
+    };
+
+    loadPlans();
   }, []);
 
   useEffect(() => {
@@ -137,15 +196,6 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
   //   { label: 'Payment method', value: '*** **** **** 4319' },
   //   { label: 'Next billing date', value: 'Aug 15, 2026' },
   // ];
-
-  // simple plan price mapping
-  const planPrices: Record<string, number> = {
-    'gold-yoga': 100,
-    'gold-zumba': 100,
-    'gold-mixed': 100,
-    diamond: 200,
-    platinum: 300,
-  };
 
   const subscriptionStatus = String(user?.subscription?.status || '').toLowerCase();
   const isPlanActive =
@@ -226,24 +276,56 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
 
     try {
       setIsOpeningCardPortal(true);
-      const response = await createCardPortalSession();
-      const portalUrl = response?.data?.url;
+      const response = await createCardSetupIntent();
+      const clientSecret = response?.data?.clientSecret;
+      const setupIntentId = response?.data?.setupIntentId;
 
-      if (!portalUrl) {
+      if (!clientSecret || !setupIntentId) {
         Toast.show({
           type: 'error',
-          text1: 'Unable to open Update Card',
-          text2: 'No update link available.',
+          text1: 'Unable to update card',
+          text2: 'Missing payment setup information.',
         });
         return;
       }
 
-      await Linking.openURL(portalUrl);
+      const initResult = await initPaymentSheet({
+        merchantDisplayName: 'Skyborne',
+        setupIntentClientSecret: clientSecret,
+        allowsDelayedPaymentMethods: true,
+      });
+
+      if (initResult.error) {
+        throw initResult.error;
+      }
+
+      const paymentResult = await presentPaymentSheet();
+      if (paymentResult.error) {
+        throw paymentResult.error;
+      }
+
+      const confirmResult = await confirmCardSetupIntent(setupIntentId);
+      if (!confirmResult.success) {
+        Toast.show({
+          type: 'error',
+          text1: 'Unable to confirm card update',
+          text2: confirmResult.message || 'Please try again.',
+        });
+        return;
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'Card updated',
+        text2: 'Your billing card has been updated successfully.',
+      });
+
+      await Promise.all([loadProfile(), fetchSubscription(), fetchHistory()]);
     } catch (error: any) {
       console.error('Update card error:', error);
       Toast.show({
         type: 'error',
-        text1: 'Unable to open Update Card',
+        text1: 'Unable to update card',
         text2:
           error?.response?.data?.message ||
           error?.data?.message ||
@@ -372,7 +454,9 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
 
           <Text style={styles.planPrice}>
             {isPlanActive
-              ? `$${planPrices[user?.plan?.toLowerCase() ?? '']}/month`
+              ? currentPlanAmount !== null
+                ? `$${currentPlanAmount}/month`
+                : '—'
               : '—'}
           </Text>
 
@@ -444,7 +528,10 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
                     return;
                   }
                   if (option.page) {
-                    navigation.navigate(option.page);
+                    navigation.navigate(option.page, {
+                      from: option.page === 'UpgradePlan' ? 'profile' : undefined,
+                      returnTo: option.page === 'UpgradePlan' ? 'Profile' : undefined,
+                    });
                   }
                 }}
               >

@@ -23,14 +23,16 @@ export interface PaymentOrderResponse {
   success: boolean;
   message: string;
   orderId?: string;
-  orderRef: string;
-  paymentLink: string;
+  orderRef?: string;
+  paymentLink?: string;
   checkoutUrl?: string;
   sessionId?: string;        // ✅ Stripe only
+  paymentIntentId?: string;  // ✅ Stripe native / payment intent
+  clientSecret?: string;     // ✅ Stripe native / payment intent
   reference?: string;        // ✅ nGenius only
-  amount: number;
-  currency: string;
-  status: string;
+  amount?: number;
+  currency?: string;
+  status?: string;
   gateway?: string;          // 'stripe' or 'ngenius'
 }
 
@@ -42,6 +44,8 @@ export interface UpgradePlanOrderResponse {
   paymentLink?: string;
   checkoutUrl?: string;
   sessionId?: string;
+  paymentIntentId?: string;
+  clientSecret?: string;
   reference?: string;
   data?: {
     subscriptionId?: string;
@@ -191,6 +195,110 @@ class PaymentService {
     }
   }
 
+  async createNativePaymentOrder(
+    payload: PaymentOrderPayload,
+  ): Promise<PaymentOrderResponse> {
+    try {
+      const requestPayload: PaymentOrderPayload = {
+        ...payload,
+        source: 'app',
+      };
+
+      console.log('🔄 Creating native payment order:', requestPayload);
+
+      const response = await this.api.post(
+        '/payment/create-native-order',
+        requestPayload,
+      );
+
+      const normalizedResponse = {
+        ...response.data,
+        paymentIntentId:
+          response.data?.paymentIntentId || response.data?.reference || undefined,
+      };
+
+      if (normalizedResponse?.success && normalizedResponse?.orderRef) {
+        await AsyncStorage.setItem('paymentOrderRef', normalizedResponse.orderRef);
+        await AsyncStorage.setItem(
+          'paymentGateway',
+          normalizedResponse.gateway || 'stripe',
+        );
+
+        if (normalizedResponse.paymentIntentId) {
+          await AsyncStorage.setItem(
+            'paymentIntentId',
+            normalizedResponse.paymentIntentId,
+          );
+          console.log(
+            '📦 Stored Stripe paymentIntentId:',
+            normalizedResponse.paymentIntentId,
+          );
+        }
+      }
+
+      return normalizedResponse;
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Native payment order creation failed';
+      console.error('❌ Native payment order creation error:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  async createNativeUpgradeOrder(
+    payload: PaymentOrderPayload,
+  ): Promise<UpgradePlanOrderResponse> {
+    try {
+      const requestPayload: PaymentOrderPayload = {
+        ...payload,
+        source: 'app',
+      };
+
+      console.log('🔄 Creating native upgrade order:', requestPayload);
+
+      const response = await this.api.post(
+        '/payment/create-native-upgrade-order',
+        requestPayload,
+      );
+
+      const normalizedResponse = {
+        ...response.data,
+        paymentIntentId:
+          response.data?.paymentIntentId || response.data?.reference || undefined,
+      };
+
+      if (normalizedResponse?.success && normalizedResponse?.orderRef) {
+        await AsyncStorage.setItem('paymentOrderRef', normalizedResponse.orderRef);
+        await AsyncStorage.setItem(
+          'paymentGateway',
+          normalizedResponse.gateway || 'stripe',
+        );
+
+        if (normalizedResponse.paymentIntentId) {
+          await AsyncStorage.setItem(
+            'paymentIntentId',
+            normalizedResponse.paymentIntentId,
+          );
+          console.log(
+            '📦 Stored Stripe paymentIntentId:',
+            normalizedResponse.paymentIntentId,
+          );
+        }
+      }
+
+      return normalizedResponse;
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Native upgrade order creation failed';
+      console.error('❌ Native upgrade order creation error:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
   /**
    * Upgrade an existing plan (Stripe) or fallback to create-order if needed
    */
@@ -276,6 +384,46 @@ class PaymentService {
     }
   }
 
+  async createCardSetupIntent(): Promise<{
+    success: boolean;
+    message?: string;
+    data?: {
+      customerId?: string;
+      clientSecret?: string;
+      setupIntentId?: string;
+    };
+  }> {
+    try {
+      const response = await this.api.post('/payment/create-card-setup-intent');
+      return response.data;
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to create card setup intent';
+      console.error('❌ Card setup intent error:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  async confirmCardSetupIntent(
+    setupIntentId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await this.api.post('/payment/confirm-card-setup-intent', {
+        setupIntentId,
+      });
+      return response.data;
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to confirm card setup intent';
+      console.error('❌ Confirm card setup intent error:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
   /**
    * Verify payment for mobile - works with both gateways
    * Automatically detects which gateway was used based on stored data
@@ -288,11 +436,12 @@ class PaymentService {
     try {
       // If no payload provided, construct it from AsyncStorage
       if (!payload) {
-        const [orderRef, gateway, reference, sessionId] = await Promise.all([
+        const [orderRef, gateway, reference, sessionId, paymentIntentId] = await Promise.all([
           AsyncStorage.getItem('paymentOrderRef'),
           AsyncStorage.getItem('paymentGateway'),
           AsyncStorage.getItem('paymentReference'),
           AsyncStorage.getItem('paymentSessionId'),
+          AsyncStorage.getItem('paymentIntentId'),
         ]);
 
         // Determine which fields to include based on gateway
@@ -307,17 +456,28 @@ class PaymentService {
           payload = {
             orderRef: orderRef || undefined,
             sessionId: sessionId || undefined,
+            paymentIntentId: paymentIntentId || undefined,
             gateway: 'stripe',
           };
-          console.log('📋 Verifying Stripe payment:', { orderRef, sessionId });
+          console.log('📋 Verifying Stripe payment:', {
+            orderRef,
+            sessionId,
+            paymentIntentId,
+          });
         } else {
           // Fallback: try both
           payload = {
             orderRef: orderRef || undefined,
             reference: reference || undefined,
             sessionId: sessionId || undefined,
+            paymentIntentId: paymentIntentId || undefined,
           };
           console.log('📋 Verifying payment (auto-detect):', payload);
+        }
+      } else if (payload.gateway === 'stripe' && !payload.orderRef) {
+        const orderRef = await AsyncStorage.getItem('paymentOrderRef');
+        if (orderRef) {
+          payload.orderRef = orderRef;
         }
       }
 
@@ -333,13 +493,20 @@ class PaymentService {
 
       return response.data;
     } catch (error: any) {
+      const errorDetails = error.response?.data?.details;
       const errorMessage =
         error.response?.data?.error ||
         error.response?.data?.message ||
         error.message ||
         'Payment verification failed';
-      console.error('❌ Payment verification error:', errorMessage);
-      throw new Error(errorMessage);
+      console.error('❌ Payment verification error:', {
+        message: errorMessage,
+        details: errorDetails,
+      });
+      const detailMessage = errorDetails?.message
+        ? ` (${errorDetails.message})`
+        : '';
+      throw new Error(`${errorMessage}${detailMessage}`);
     }
   }
 
@@ -394,6 +561,7 @@ class PaymentService {
 
       await AsyncStorage.removeItem('paymentOrderRef');
       await AsyncStorage.removeItem('paymentSessionId');  // Stripe
+      await AsyncStorage.removeItem('paymentIntentId'); // Stripe native
       await AsyncStorage.removeItem('paymentReference');  // nGenius
       await AsyncStorage.removeItem('paymentGateway');
 
@@ -409,13 +577,15 @@ class PaymentService {
   async getStoredPaymentDetails(): Promise<{
     orderRef?: string;
     sessionId?: string;    // Stripe
+    paymentIntentId?: string; // Stripe native
     reference?: string;    // nGenius
     gateway?: string;
   }> {
     try {
-      const [orderRef, sessionId, reference, gateway] = await Promise.all([
+      const [orderRef, sessionId, paymentIntentId, reference, gateway] = await Promise.all([
         AsyncStorage.getItem('paymentOrderRef'),
         AsyncStorage.getItem('paymentSessionId'),
+        AsyncStorage.getItem('paymentIntentId'),
         AsyncStorage.getItem('paymentReference'),
         AsyncStorage.getItem('paymentGateway'),
       ]);
@@ -423,6 +593,7 @@ class PaymentService {
       return {
         ...(orderRef && { orderRef }),
         ...(sessionId && { sessionId }),
+        ...(paymentIntentId && { paymentIntentId }),
         ...(reference && { reference }),
         ...(gateway && { gateway }),
       };
@@ -477,11 +648,23 @@ export const paymentService = new PaymentService();
 export const createPaymentOrder = (payload: PaymentOrderPayload) =>
   paymentService.createPaymentOrder(payload);
 
+export const createNativePaymentOrder = (payload: PaymentOrderPayload) =>
+  paymentService.createNativePaymentOrder(payload);
+
 export const upgradePlanOrder = (payload: PaymentOrderPayload) =>
   paymentService.upgradePlanOrder(payload);
 
+export const createNativeUpgradeOrder = (payload: PaymentOrderPayload) =>
+  paymentService.createNativeUpgradeOrder(payload);
+
 export const createCardPortalSession = (returnUrl?: string) =>
   paymentService.createCardPortalSession(returnUrl);
+
+export const createCardSetupIntent = () =>
+  paymentService.createCardSetupIntent();
+
+export const confirmCardSetupIntent = (setupIntentId: string) =>
+  paymentService.confirmCardSetupIntent(setupIntentId);
 
 export const verifyMobilePayment = (payload?: PaymentVerificationPayload) =>
   paymentService.verifyMobilePayment(payload);

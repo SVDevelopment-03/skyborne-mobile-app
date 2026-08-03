@@ -1,4 +1,4 @@
-package com.skyborne
+package com.skyborne.drop
 
 import android.app.Application
 import com.facebook.react.PackageList

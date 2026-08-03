@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { initPaymentSheet, presentPaymentSheet } from '@stripe/stripe-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { ChevronLeft, Lock, ArrowRight, MapPin, User, ShoppingBag } from 'lucide-react-native';
@@ -47,8 +47,6 @@ const C = {
   error: '#D94F4F',
   errorBg: '#FEF0F0',
 };
-
-const APP_CHECKOUT_CALLBACK = 'skybornedrop://payment-processing';
 
 const InputField = ({
   value,
@@ -146,18 +144,43 @@ const CheckoutScreen: React.FC<Props> = ({ navigation }) => {
     }
     try {
       setSubmitting(true);
-      const result = await shopService.createCheckoutSession({
+      const result = await shopService.createNativePaymentIntent({
         shippingAddress: {
           firstName: form.firstName, lastName: form.lastName,
           address: form.address, city: form.city, zip: form.zip,
           email: form.email, phone: form.phone,
         },
         source: 'app',
-        successUrl: `${APP_CHECKOUT_CALLBACK}?status=success&sessionId={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${APP_CHECKOUT_CALLBACK}?status=cancelled`,
       });
-      await Linking.openURL(result.checkoutUrl);
-      Toast.show({ type: 'success', text1: 'Redirecting to secure checkout…' });
+
+      const { error } = await initPaymentSheet({
+        merchantDisplayName: 'Skyborne',
+        paymentIntentClientSecret: result.clientSecret,
+        allowsDelayedPaymentMethods: true,
+        defaultBillingDetails: {
+          name: `${form.firstName} ${form.lastName}`.trim(),
+          email: form.email,
+          phone: form.phone,
+          address: {
+            city: form.city,
+            country: 'US',
+            line1: form.address,
+            postalCode: form.zip,
+            state: '',
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const paymentResult = await presentPaymentSheet();
+      if (paymentResult.error) {
+        throw paymentResult.error;
+      }
+
+      Toast.show({ type: 'success', text1: 'Payment sheet completed', text2: 'Your native Stripe payment is ready to be finalized.' });
     } catch (error: any) {
       Toast.show({ type: 'error', text1: 'Checkout failed', text2: error?.response?.data?.message ?? error?.message });
     } finally {

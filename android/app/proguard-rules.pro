@@ -35,7 +35,7 @@
 
 # ============ Keep custom models & enums ============
 -keep class * extends java.lang.Enum { *; }
--keep class com.skyborne.** { *; }
+-keep class com.skyborne.drop.** { *; }
 
 # ============ Keep all interfaces ============
 -keep interface * { *; }

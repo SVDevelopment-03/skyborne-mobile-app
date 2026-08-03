@@ -405,6 +405,20 @@ class ShopService {
     return response.data?.data;
   }
 
+  async createNativePaymentIntent(payload: {
+    shippingAddress: ShippingAddress;
+    source?: 'app' | 'web';
+  }): Promise<{ paymentIntentId: string; clientSecret: string; orderRef: string; amount: number }> {
+    const token = await this.getAuthToken();
+    if (!token) {
+      throw new Error('Please login to continue checkout');
+    }
+
+    await this.syncGuestCartToServer();
+    const response = await this.api.post('/ecom-payments/create-native-payment-intent', payload);
+    return response.data?.data;
+  }
+
   async getMyOrders(params?: {
     page?: number;
     limit?: number;

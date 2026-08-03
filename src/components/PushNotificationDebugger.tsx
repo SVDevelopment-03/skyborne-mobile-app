@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationService } from '../services/notificationService';
+import { getApp, getApps } from '@react-native-firebase/app/lib/modular';
+import { getMessaging, getToken as getFcmToken } from '@react-native-firebase/messaging/lib/modular';
 
 /**
  * Development/Testing component for push notifications
@@ -17,8 +19,13 @@ export default function PushNotificationDebugger() {
 
   const getToken = async () => {
     try {
-      const messaging = require('@react-native-firebase/messaging').default;
-      const fcmToken = await messaging().getToken();
+      if (getApps().length === 0) {
+        throw new Error('No Firebase app is configured');
+      }
+
+      const app = getApp();
+      const messaging = getMessaging(app);
+      const fcmToken = await getFcmToken(messaging);
       setToken(fcmToken);
       addLog(`Token retrieved: ${fcmToken.slice(0, 30)}...`);
     } catch (error) {

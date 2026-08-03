@@ -8,6 +8,8 @@
 import React from 'react';
 import { Alert, AppState, AppStateStatus, Linking, PermissionsAndroid, Platform, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { STRIPE_PUBLISHABLE_KEY as STRIPE_PUBLISHABLE_KEY_ENV } from '@env';
 import { LinkingOptions, NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { Provider, useSelector } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -22,7 +24,7 @@ import {
   registerDeviceForRemoteMessages,
   requestPermission,
 } from '@react-native-firebase/messaging/lib/modular';
-import { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import type { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RootStackParamList } from './src/navigation/AppNavigator';
 import { store, persistor, RootState } from './src/store';
@@ -32,6 +34,16 @@ import { notificationSoundService } from './src/services/notificationSoundServic
 import { notificationHistoryService } from './src/services/notificationHistoryService';
 import { notificationEvents } from './src/utils/notificationEvents';
 import { clearAllAppCache } from './src/store/clearCache';
+
+const STRIPE_PUBLISHABLE_KEY =
+  (STRIPE_PUBLISHABLE_KEY_ENV || '').trim() ||
+  'pk_test_51SjzaC39om0H69ZJ9T1qXTBNWJMMEfttBETG1aROccPGueJ5muJ4BKZf89d65adlPGOFGLNpc3t26i66vQ6KRo6900tfCMqzNS';
+
+if (!STRIPE_PUBLISHABLE_KEY_ENV?.trim()) {
+  console.warn(
+    'Stripe publishable key env is missing. Using fallback test publishable key. Ensure the app publishable key matches the backend Stripe account.',
+  );
+}
 
 const APP_CHECKOUT_CALLBACK_PREFIXES = [
   'skybornedrop://shop-checkout-result',
@@ -675,26 +687,28 @@ export default function App() {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <SafeAreaProvider>
-          <PushNotificationsBootstrap />
-          <StatusBar barStyle={'dark-content'} />
-          <NavigationContainer
-            ref={navigationRef}
-            linking={linking}
-            onReady={() => {
-              if (pendingCallbackUrlRef.current) {
-                handleCheckoutCallback(pendingCallbackUrlRef.current);
-              }
+          <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} urlScheme="skybornedrop">
+            <PushNotificationsBootstrap />
+            <StatusBar barStyle={'dark-content'} />
+            <NavigationContainer
+              ref={navigationRef}
+              linking={linking}
+              onReady={() => {
+                if (pendingCallbackUrlRef.current) {
+                  handleCheckoutCallback(pendingCallbackUrlRef.current);
+                }
 
-              if (pendingDeepLinkUrlRef.current) {
-                navigateFromDeepLink(pendingDeepLinkUrlRef.current);
-              }
-            }}
-          >
-            <View style={styles.container}>
-              <AppNavigator />
-            </View>
-          </NavigationContainer>
-          <Toast />
+                if (pendingDeepLinkUrlRef.current) {
+                  navigateFromDeepLink(pendingDeepLinkUrlRef.current);
+                }
+              }}
+            >
+              <View style={styles.container}>
+                <AppNavigator />
+              </View>
+            </NavigationContainer>
+            <Toast />
+          </StripeProvider>
         </SafeAreaProvider>
       </PersistGate>
     </Provider>
