@@ -30,12 +30,6 @@ const ExploreScreen = () => {
     // },
     {
       id: 3,
-      title: 'Zumba Dance',
-      sessions: '100+ Sessions',
-      // image: ZumbaImg,
-    },
-    {
-      id: 4,
       title: 'Diet & Nutrition',
       sessions: '100+ Sessions',
       // image: DietImg,

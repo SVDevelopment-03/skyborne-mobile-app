@@ -63,13 +63,13 @@ const PLAN_CONFIG = {
       amount: 200,
       display: '$200',
       period: 'Month',
-      sessions: '2 Yoga + 2 Zumba',
+      sessions: '2 Yoga',
     },
     yearly: {
       amount: 2280,
       display: '$2,280',
       period: 'Year',
-      sessions: '24 Yoga + 24 Zumba',
+      sessions: '24 Yoga',
       savings: 'Save 5%',
     },
   },
@@ -82,13 +82,13 @@ const PLAN_CONFIG = {
       amount: 300,
       display: '$300',
       period: 'Month',
-      sessions: '2 Yoga + 2 Zumba + 1 Special',
+      sessions: '2 Yoga + 1 Special',
     },
     yearly: {
       amount: 3420,
       display: '$3,420',
       period: 'Year',
-      sessions: '24 Yoga + 24 Zumba + 12 Special',
+      sessions: '24 Yoga + 12 Special',
       savings: 'Save 5%',
     },
   },
@@ -101,20 +101,6 @@ const goldSubOptions = [
     monthlyDesc: '2 Yoga Classes',
     yearlyDesc: '24 Yoga Classes',
     value: 1,
-  },
-  {
-    id: 'gold-mixed',
-    label: '1 Yoga + 1 Zumba',
-    monthlyDesc: '1 Yoga + 1 Zumba Classes',
-    yearlyDesc: '12 Yoga + 12 Zumba Classes',
-    value: 2,
-  },
-  {
-    id: 'gold-zumba',
-    label: '2 Zumba',
-    monthlyDesc: '2 Zumba Classes',
-    yearlyDesc: '24 Zumba Classes',
-    value: 3,
   },
 ];
 
@@ -332,11 +318,7 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
   const getPlanDetails = (planKey: string) => {
     let baseConfig: any;
 
-    if (
-      planKey === 'gold-yoga' ||
-      planKey === 'gold-mixed' ||
-      planKey === 'gold-zumba'
-    ) {
+    if (planKey === 'gold-yoga' || planKey === 'gold') {
       baseConfig = PLAN_CONFIG.gold;
     } else if (planKey === 'diamond') {
       baseConfig = PLAN_CONFIG.diamond;

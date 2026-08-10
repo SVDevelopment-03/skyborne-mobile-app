@@ -130,16 +130,12 @@ const ProfileScreen = () => {
     // Define which credit types to show based on plan
     let allowedCredits: string[] = [];
 
-    if (plan === 'gold-yoga') {
+    if (plan === 'gold-yoga' || plan === 'gold-zumba' || plan === 'gold-mixed') {
       allowedCredits = ['yoga'];
-    } else if (plan === 'gold-zumba') {
-      allowedCredits = ['zumba'];
-    } else if (plan === 'gold-mixed') {
-      allowedCredits = ['yoga', 'zumba'];
     } else if (plan === 'diamond') {
-      allowedCredits = ['yoga', 'zumba']; // Diamond doesn't get specialty according to planConfig
+      allowedCredits = ['yoga'];
     } else if (plan === 'platinum') {
-      allowedCredits = ['yoga', 'zumba', 'specialty'];
+      allowedCredits = ['yoga', 'specialty'];
     }
 
     // Filter and create progress items only for allowed credits
@@ -278,8 +274,8 @@ const ProfileScreen = () => {
       const normalizedRaw = rawPlan.toLowerCase();
       const fixedPlanMap: Record<string, string> = {
         'gold-yoga': 'Gold Yoga',
-        'gold-zumba': 'Gold Zumba',
-        'gold-mixed': 'Gold Mixed',
+        'gold-zumba': 'Gold Yoga',
+        'gold-mixed': 'Gold Yoga',
         diamond: 'Diamond',
         platinum: 'Platinum',
       };

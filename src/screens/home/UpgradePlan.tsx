@@ -40,16 +40,16 @@ const PLAN_CONFIG = {
     badge: 'Beginner',
     badgeType: 'value',
     hasSubOptions: true,
-    monthly: { 
-      amount: 100, 
+    monthly: {
+      amount: 100,
       display: '$100/Month',
-      sessions: '2 Classes per Month'
+      sessions: '2 Yoga Classes per Month',
     },
-    yearly: { 
-      amount: 1140, 
+    yearly: {
+      amount: 1140,
       display: '$1,140/Year',
-      sessions: '24 Classes per Year (2/Month)',
-      savings: '5% off'
+      sessions: '24 Yoga Classes per Year',
+      savings: '5% off',
     },
   },
   diamond: {
@@ -57,16 +57,16 @@ const PLAN_CONFIG = {
     badge: 'Premium',
     badgeType: 'premium',
     hasSubOptions: false,
-    monthly: { 
-      amount: 200, 
+    monthly: {
+      amount: 200,
       display: '$200/Month',
-      sessions: '2 Yoga + 2 Zumba per Month'
+      sessions: '2 Yoga Classes per Month',
     },
-    yearly: { 
-      amount: 2280, 
+    yearly: {
+      amount: 2280,
       display: '$2,280/Year',
-      sessions: '24 Yoga + 24 Zumba per Year',
-      savings: '5% off'
+      sessions: '24 Yoga Classes per Year',
+      savings: '5% off',
     },
   },
   platinum: {
@@ -74,24 +74,22 @@ const PLAN_CONFIG = {
     badge: 'Best Value',
     badgeType: 'value',
     hasSubOptions: false,
-    monthly: { 
-      amount: 300, 
+    monthly: {
+      amount: 300,
       display: '$300/Month',
-      sessions: '2 Yoga + 2 Zumba + 1 Special per Month'
+      sessions: '2 Yoga + 1 Special per Month',
     },
-    yearly: { 
-      amount: 3420, 
+    yearly: {
+      amount: 3420,
       display: '$3,420/Year',
-      sessions: '24 Yoga + 24 Zumba + 12 Special per Year',
-      savings: '5% off'
+      sessions: '24 Yoga + 12 Special per Year',
+      savings: '5% off',
     },
   },
 };
 
 const goldSubOptions = [
   { id: 'gold-yoga', label: '2 Yoga', displayMonthly: '2 Yoga per Month', displayYearly: '24 Yoga per Year', value: 1 },
-  { id: 'gold-mixed', label: '1 Yoga + 1 Zumba', displayMonthly: '1 Yoga + 1 Zumba per Month', displayYearly: '12 Yoga + 12 Zumba per Year', value: 2 },
-  { id: 'gold-zumba', label: '2 Zumba', displayMonthly: '2 Zumba per Month', displayYearly: '24 Zumba per Year', value: 3 },
 ];
 
 const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
@@ -333,7 +331,7 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
     // Determine which plan config to use
     let baseConfig: any;
     
-    if (planId === 'gold-yoga' || planId === 'gold-mixed' || planId === 'gold-zumba') {
+    if (planId === 'gold-yoga' || planId === 'gold') {
       // Gold plan - use GOLD config
       baseConfig = PLAN_CONFIG.gold;
     } else if (planId === 'diamond') {

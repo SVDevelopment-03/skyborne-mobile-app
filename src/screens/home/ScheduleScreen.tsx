@@ -339,8 +339,8 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
     const normalizedRaw = rawPlan.toLowerCase();
     const fixedPlanMap: Record<string, string> = {
       'gold-yoga': 'Gold Yoga',
-      'gold-zumba': 'Gold Zumba',
-      'gold-mixed': 'Gold Mixed',
+      'gold-zumba': 'Gold Yoga',
+      'gold-mixed': 'Gold Yoga',
       diamond: 'Diamond',
       platinum: 'Platinum',
     };

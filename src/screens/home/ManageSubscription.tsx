@@ -71,11 +71,11 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
   const getApiPlanKey = (planName?: string) => {
     const normalized = String(planName || '').toLowerCase();
     if (normalized.includes('gold-yoga')) return 'gold-yoga';
-    if (normalized.includes('gold-zumba')) return 'gold-zumba';
-    if (normalized.includes('gold-mixed')) return 'gold-mixed';
+    if (normalized.includes('gold-zumba')) return 'gold-yoga';
+    if (normalized.includes('gold-mixed')) return 'gold-yoga';
     if (normalized.includes('diamond')) return 'diamond';
     if (normalized.includes('platinum')) return 'platinum';
-    if (normalized.includes('gold')) return 'gold-mixed';
+    if (normalized.includes('gold')) return 'gold-yoga';
     return normalized || '';
   };
 
@@ -205,7 +205,15 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
     subscriptionStatus !== 'suspended';
   const canEditCard = subscriptionStatus === 'active';
   const displayPlan = isPlanActive
-    ? user?.plan?.toUpperCase() ?? '--'
+    ? (() => {
+        const rawPlan = String(user?.plan || '').trim();
+        if (!rawPlan) return '--';
+        const normalized = rawPlan.toLowerCase();
+        if (normalized.includes('gold')) return 'GOLD YOGA';
+        if (normalized.includes('diamond')) return 'DIAMOND';
+        if (normalized.includes('platinum')) return 'PLATINUM';
+        return rawPlan.toUpperCase();
+      })()
     : 'NO PLAN';
 
   const handleCancelSubscription = async () => {

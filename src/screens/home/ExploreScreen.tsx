@@ -52,12 +52,6 @@ const ExploreScreen = ({ navigation }: any) => {
     //   page: 'FitnessDetails',
     // },
     {
-      id: 3,
-      title: 'Zumba Dance',
-      source: ExploreImages.zumba,
-      page: 'ZumbaDetails',
-    },
-    {
       id: 4,
       title: 'Diet & Nutrition',
       source: ExploreImages.diet,
