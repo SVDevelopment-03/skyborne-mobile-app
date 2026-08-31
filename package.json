@@ -33,6 +33,7 @@
     "react-hook-form": "^7.46.3",
     "react-native": "0.83.1",
     "react-native-dotenv": "^3.4.11",
+    "react-native-iap": "^16.3.1",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-otp-auto-fill": "^0.1.17",
     "react-native-safe-area-context": "^5.5.2",

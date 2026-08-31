@@ -25,6 +25,7 @@ import {
 } from '../../services/paymentService';
 import { profileService } from '../../services/profileService';
 import Toast from 'react-native-toast-message';
+import AppleIAPSection from '../../components/AppleIAPSection';
 
 interface BillingInfo {
   label: string;
@@ -523,6 +524,13 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
             </View>
           ))}
         </View> */}
+
+        {/* ✅ APPLE IN-APP PURCHASE SECTION */}
+        <AppleIAPSection userId={user?._id} onPurchaseSuccess={() => {
+          loadProfile();
+          fetchSubscription();
+          fetchHistory();
+        }} />
 
         {/* Settings Options */}
         <View style={styles.settingsContainer}>

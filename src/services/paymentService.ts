@@ -640,6 +640,92 @@ class PaymentService {
       return null;
     }
   }
+
+  /**
+   * ✅ APPLE IN-APP PURCHASE METHODS
+   */
+
+  /**
+   * Validate Apple IAP receipt with backend
+   */
+  async validateAppleReceipt(receipt: string, userId: string): Promise<any> {
+    try {
+      console.log('🍎 Validating Apple receipt with backend...');
+
+      const response = await this.api.post('/payment/apple-iap/validate-receipt', {
+        receipt,
+        userId,
+      });
+
+      if (response.data?.success) {
+        console.log('✅ Apple receipt validated successfully');
+        await AsyncStorage.setItem('applePaymentOrderRef', response.data.data?.orderRef || '');
+        return response.data;
+      }
+
+      throw new Error(response.data?.message || 'Receipt validation failed');
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Apple receipt validation failed';
+      console.error('❌ Apple receipt validation error:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Restore Apple IAP purchases
+   */
+  async restoreApplePurchases(receipt: string, userId: string): Promise<any> {
+    try {
+      console.log('🍎 Restoring Apple purchases...');
+
+      const response = await this.api.post('/payment/apple-iap/restore-purchases', {
+        receipt,
+        userId,
+      });
+
+      if (response.data?.success) {
+        console.log(`✅ Restored ${response.data.data?.count || 0} purchases`);
+        return response.data;
+      }
+
+      throw new Error(response.data?.message || 'Purchase restoration failed');
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Purchase restoration failed';
+      console.error('❌ Purchase restoration error:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Get available Apple IAP products
+   */
+  async getAppleProducts(): Promise<any> {
+    try {
+      console.log('🍎 Fetching Apple IAP products...');
+
+      const response = await this.api.get('/payment/apple-iap/products');
+
+      if (response.data?.success) {
+        console.log(`✅ Retrieved ${response.data.data?.length || 0} Apple products`);
+        return response.data;
+      }
+
+      throw new Error(response.data?.message || 'Failed to fetch products');
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to fetch Apple products';
+      console.error('❌ Error fetching Apple products:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
 }
 
 export const paymentService = new PaymentService();
