@@ -7,8 +7,10 @@ import {
   initConnection,
   endConnection,
   getProducts,
+  getSubscriptions,
   requestSubscription,
   requestPurchase,
+  finishTransaction,
   getAvailablePurchases,
   getPurchaseHistory,
   purchaseUpdatedListener,
@@ -35,6 +37,7 @@ export interface ApplePurchase {
   originalTransactionId?: string;
   purchaseTime: number;
   originalPurchaseTime?: number;
+  rawPurchase?: any;
 }
 
 // Apple Product IDs - must match App Store Connect configuration
@@ -104,11 +107,11 @@ class AppleIAPService {
     try {
       await this.initializeIAP();
 
-      const products = await getProducts(APPLE_PRODUCT_IDS);
+      const products = await getSubscriptions({ skus: APPLE_PRODUCT_IDS });
 
       console.log(`✅ Retrieved ${products.length} products from App Store`);
 
-      return products.map((product) => ({
+      return products.map((product: any) => ({
         productId: product.productId,
         title: product.title,
         description: product.description || '',
@@ -133,7 +136,10 @@ class AppleIAPService {
 
       console.log(`🛒 Requesting subscription for product: ${productId}`);
 
-      const purchase = await requestSubscription(productId);
+      const purchaseResult = await requestSubscription({ sku: productId });
+      const purchase = Array.isArray(purchaseResult)
+        ? purchaseResult[0]
+        : purchaseResult;
 
       if (!purchase) {
         console.log('⚠️  Purchase was cancelled by user');
@@ -144,14 +150,15 @@ class AppleIAPService {
 
       return {
         productId: purchase.productId,
-        transactionId: purchase.transactionId,
+        transactionId: purchase.transactionId || '',
         transactionReceipt: purchase.transactionReceipt,
-        originalTransactionId: purchase.originalTransactionId,
-        purchaseTime: purchase.purchaseTime || Date.now(),
-        originalPurchaseTime: purchase.originalPurchaseTime,
+        originalTransactionId: purchase.originalTransactionIdentifierIOS,
+        purchaseTime: purchase.transactionDate || Date.now(),
+        originalPurchaseTime: purchase.originalTransactionDateIOS,
+        rawPurchase: purchase,
       };
     } catch (error: any) {
-      if (error.code === PurchaseError.E_USER_CANCELLED) {
+      if (error.code === 'E_USER_CANCELLED') {
         console.log('⚠️  User cancelled the purchase');
         return null;
       }
@@ -173,11 +180,12 @@ class AppleIAPService {
 
       return purchases.map((purchase) => ({
         productId: purchase.productId,
-        transactionId: purchase.transactionId,
+        transactionId: purchase.transactionId || '',
         transactionReceipt: purchase.transactionReceipt,
-        originalTransactionId: purchase.originalTransactionId,
-        purchaseTime: purchase.purchaseTime || Date.now(),
-        originalPurchaseTime: purchase.originalPurchaseTime,
+        originalTransactionId: purchase.originalTransactionIdentifierIOS,
+        purchaseTime: purchase.transactionDate || Date.now(),
+        originalPurchaseTime: purchase.originalTransactionDateIOS,
+        rawPurchase: purchase,
       }));
     } catch (error) {
       console.error('❌ Error getting available purchases:', error);
@@ -198,11 +206,12 @@ class AppleIAPService {
 
       return history.map((purchase) => ({
         productId: purchase.productId,
-        transactionId: purchase.transactionId,
+        transactionId: purchase.transactionId || '',
         transactionReceipt: purchase.transactionReceipt,
-        originalTransactionId: purchase.originalTransactionId,
-        purchaseTime: purchase.purchaseTime || Date.now(),
-        originalPurchaseTime: purchase.originalPurchaseTime,
+        originalTransactionId: purchase.originalTransactionIdentifierIOS,
+        purchaseTime: purchase.transactionDate || Date.now(),
+        originalPurchaseTime: purchase.originalTransactionDateIOS,
+        rawPurchase: purchase,
       }));
     } catch (error) {
       console.error('❌ Error getting purchase history:', error);
@@ -225,16 +234,25 @@ class AppleIAPService {
 
       return purchases.map((purchase) => ({
         productId: purchase.productId,
-        transactionId: purchase.transactionId,
+        transactionId: purchase.transactionId || '',
         transactionReceipt: purchase.transactionReceipt,
-        originalTransactionId: purchase.originalTransactionId,
-        purchaseTime: purchase.purchaseTime || Date.now(),
-        originalPurchaseTime: purchase.originalPurchaseTime,
+        originalTransactionId: purchase.originalTransactionIdentifierIOS,
+        purchaseTime: purchase.transactionDate || Date.now(),
+        originalPurchaseTime: purchase.originalTransactionDateIOS,
+        rawPurchase: purchase,
       }));
     } catch (error) {
       console.error('❌ Error restoring purchases:', error);
       throw error;
     }
+  }
+
+  /** Complete the store transaction only after server validation succeeds. */
+  static async finishPurchase(purchase: ApplePurchase): Promise<void> {
+    await finishTransaction({
+      purchase: purchase.rawPurchase || purchase,
+      isConsumable: false,
+    });
   }
 
   /**
@@ -251,11 +269,12 @@ class AppleIAPService {
       console.log('📱 Purchase updated:', purchase.productId);
       onPurchaseUpdate({
         productId: purchase.productId,
-        transactionId: purchase.transactionId,
+        transactionId: purchase.transactionId || '',
         transactionReceipt: purchase.transactionReceipt,
-        originalTransactionId: purchase.originalTransactionId,
-        purchaseTime: purchase.purchaseTime || Date.now(),
-        originalPurchaseTime: purchase.originalPurchaseTime,
+        originalTransactionId: purchase.originalTransactionIdentifierIOS,
+        purchaseTime: purchase.transactionDate || Date.now(),
+        originalPurchaseTime: purchase.originalTransactionDateIOS,
+        rawPurchase: purchase,
       });
     });
   }

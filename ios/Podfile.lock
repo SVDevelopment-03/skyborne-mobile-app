@@ -88,6 +88,67 @@ PODS:
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
+  - NitroIap (16.6.2):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - NitroModules
+    - openiap (= 3.4.0)
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - NitroModules (0.36.5):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - openiap (3.4.0)
   - PromisesObjC (2.4.0)
   - RCT-Folly (2024.11.18.00):
     - boost
@@ -1975,7 +2036,7 @@ PODS:
     - SocketRocket
   - react-native-otp-auto-fill (0.1.17):
     - React-Core
-  - react-native-safe-area-context (5.6.2):
+  - react-native-safe-area-context (5.10.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -1993,8 +2054,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.6.2)
-    - react-native-safe-area-context/fabric (= 5.6.2)
+    - react-native-safe-area-context/common (= 5.10.0)
+    - react-native-safe-area-context/fabric (= 5.10.0)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -2005,7 +2066,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-safe-area-context/common (5.6.2):
+  - react-native-safe-area-context/common (5.10.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2033,7 +2094,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-safe-area-context/fabric (5.6.2):
+  - react-native-safe-area-context/fabric (5.10.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2062,7 +2123,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video (6.19.0):
+  - react-native-video (6.19.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -2080,7 +2141,7 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-video/Video (= 6.19.0)
+    - react-native-video/Video (= 6.19.3)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -2091,7 +2152,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video/Fabric (6.19.0):
+  - react-native-video/Fabric (6.19.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -2119,7 +2180,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-video/Video (6.19.0):
+  - react-native-video/Video (6.19.3):
     - boost
     - DoubleConversion
     - fast_float
@@ -2148,7 +2209,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-webview (13.16.1):
+  - react-native-webview (13.17.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -2771,7 +2832,7 @@ PODS:
     - FirebaseCoreExtension
     - React-Core
     - RNFBApp
-  - RNGoogleSignin (16.1.1):
+  - RNGoogleSignin (16.1.5):
     - boost
     - DoubleConversion
     - fast_float
@@ -2887,7 +2948,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNSVG (15.15.1):
+  - RNSVG (15.15.5):
     - boost
     - DoubleConversion
     - fast_float
@@ -2913,10 +2974,10 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNSVG/common (= 15.15.1)
+    - RNSVG/common (= 15.15.5)
     - SocketRocket
     - Yoga
-  - RNSVG/common (15.15.1):
+  - RNSVG/common (15.15.5):
     - boost
     - DoubleConversion
     - fast_float
@@ -3081,6 +3142,8 @@ DEPENDENCIES:
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - NitroIap (from `../node_modules/react-native-iap`)
+  - NitroModules (from `../node_modules/react-native-nitro-modules`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
@@ -3183,6 +3246,7 @@ SPEC REPOS:
     - GTMAppAuth
     - GTMSessionFetcher
     - nanopb
+    - openiap
     - PromisesObjC
     - SocketRocket
     - Stripe
@@ -3213,6 +3277,10 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-v0.14.0
+  NitroIap:
+    :path: "../node_modules/react-native-iap"
+  NitroModules:
+    :path: "../node_modules/react-native-nitro-modules"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -3401,8 +3469,11 @@ SPEC CHECKSUMS:
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
-  hermes-engine: 0dabc51ad48e22eb250dd5b05d42671f6fcbc810
+  hermes-engine: eadcd4dbfb5dcd2e07e02c2a0e0d1572245b4905
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
+  NitroIap: 25382e8f4cc5b5f79bcfa589a954b936f41aaf92
+  NitroModules: d52aaa5db99af2be4c2b171460e3a7541d78fe4d
+  openiap: 253070b2afe71078a2cae63a2b8e282bdd44a059
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: a41bbdd9af30bf2e5715796b313e44ec43eefff1
@@ -3441,9 +3512,9 @@ SPEC CHECKSUMS:
   React-Mapbuffer: d0c5f3793332ebec11bfbbbd962ea526ee85efff
   React-microtasksnativemodule: 1a7d806e2ec20df1c6d88b29e72787fb48aeab70
   react-native-otp-auto-fill: ac52a4437cd7e7f41dfa00db994df6898dcf744a
-  react-native-safe-area-context: 0a3b034bb63a5b684dd2f5fffd3c90ef6ed41ee8
-  react-native-video: 15a8286469ec8098852debb32ce6a32906695e1d
-  react-native-webview: 83c663c5bdf1357d3e7c00986260cb888ea0e328
+  react-native-safe-area-context: b0fc3ec689477fca9879f78c9ba584dc1ca11af5
+  react-native-video: 558711646609a96027f16a724c89556d9b149806
+  react-native-webview: fb55e85095e22e6cfb814a2b122b4860de91a620
   React-NativeModulesApple: e554252d69442010807867cc7d70c0008048ad20
   React-networking: 669cb54cc7e5b65d7dafeeb36970a1421adc8bb3
   React-oscompat: 80166b66da22e7af7fad94474e9997bd52d4c8c6
@@ -3481,10 +3552,10 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: 87d51a3aa982dd38d07ecb588aa67821a4a14eee
   RNFBApp: 90cf0209fb8f0460ab069a7de857d7ec851c8476
   RNFBMessaging: 37dd861b8600ec2ae9a06ba42ae4285cb707a731
-  RNGoogleSignin: c1de96d92d6dd4335fa8e0f0ed4312a9d34e4ecb
+  RNGoogleSignin: 7b0ccc118722527cb69db78e7c7b13f05efafee9
   RNScreens: d6413aeb1878cdafd3c721e2c5218faf5d5d3b13
   RNSound: 80f864773ff8f670fc8f052a3e478cec201d9b43
-  RNSVG: b5da7cb4bb60503fd841bf6eddae1d171e515d79
+  RNSVG: 14e21dacbded6cfa51becd6076c5921aa52a6992
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Stripe: 1d3402c1d9ac1a842e355784214abf1b6feb60e2
   stripe-react-native: 5a33358c9903881fd6a134cc93924cd64b794cdb

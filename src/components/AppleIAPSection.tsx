@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Toast from 'react-native-toast-message';
-import { appleIAPService } from '../../services/appleIAPService';
-import { paymentService } from '../../services/paymentService';
+import { appleIAPService } from '../services/appleIAPService';
+import { paymentService } from '../services/paymentService';
 
 interface AppleProduct {
   productId: string;
@@ -43,13 +43,10 @@ export const AppleIAPSection: React.FC<AppleIAPSectionProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
-  // Only show on iOS
-  if (Platform.OS !== 'ios') {
-    return null;
-  }
-
   useEffect(() => {
-    loadAppleProducts();
+    if (Platform.OS === 'ios') {
+      loadAppleProducts();
+    }
   }, []);
 
   const loadAppleProducts = async () => {
@@ -111,6 +108,7 @@ export const AppleIAPSection: React.FC<AppleIAPSectionProps> = ({
       );
 
       if (validationResponse.success) {
+        await appleIAPService.finishPurchase(purchase);
         Toast.show({
           type: 'success',
           text1: 'Purchase successful!',
@@ -138,6 +136,11 @@ export const AppleIAPSection: React.FC<AppleIAPSectionProps> = ({
       setSelectedProductId(null);
     }
   };
+
+  // Only show on iOS.
+  if (Platform.OS !== 'ios') {
+    return null;
+  }
 
   const handleRestorePurchases = async () => {
     if (!userId) {
@@ -174,7 +177,7 @@ export const AppleIAPSection: React.FC<AppleIAPSectionProps> = ({
       const latestPurchase = purchases[0];
 
       // Validate with backend
-      const restoreResponse = await paymentService.restoreApplePurchases(
+      const restoreResponse = await paymentService.validateAppleReceipt(
         latestPurchase.transactionReceipt,
         userId,
       );
@@ -183,7 +186,7 @@ export const AppleIAPSection: React.FC<AppleIAPSectionProps> = ({
         Toast.show({
           type: 'success',
           text1: 'Purchases restored!',
-          text2: `Restored ${restoreResponse.data?.count || purchases.length} purchases`,
+          text2: 'Your Apple subscription is active again.',
         });
 
         if (onPurchaseSuccess) {
