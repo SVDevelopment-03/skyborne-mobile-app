@@ -25,6 +25,7 @@ import {
   clearPaymentCache,
   upgradePlanOrder,
 } from '../../services/paymentService';
+import { profileService } from '../../services/profileService';
 import SocketService from '../../services/socketService';
 import { fetchUserProfile } from '../../store/homeSlice';
 import { RootState } from '../../store';
@@ -41,13 +42,13 @@ const PLAN_CONFIG = {
     badgeType: 'value',
     hasSubOptions: true,
     monthly: {
-      amount: 100,
-      display: '$100/Month',
+      amount: 0,
+      display: '',
       sessions: '2 Yoga Classes per Month',
     },
     yearly: {
-      amount: 1140,
-      display: '$1,140/Year',
+      amount: 0,
+      display: '',
       sessions: '24 Yoga Classes per Year',
       savings: '5% off',
     },
@@ -58,13 +59,13 @@ const PLAN_CONFIG = {
     badgeType: 'premium',
     hasSubOptions: false,
     monthly: {
-      amount: 200,
-      display: '$200/Month',
+      amount: 0,
+      display: '',
       sessions: '2 Yoga Classes per Month',
     },
     yearly: {
-      amount: 2280,
-      display: '$2,280/Year',
+      amount: 0,
+      display: '',
       sessions: '24 Yoga Classes per Year',
       savings: '5% off',
     },
@@ -75,13 +76,13 @@ const PLAN_CONFIG = {
     badgeType: 'value',
     hasSubOptions: false,
     monthly: {
-      amount: 300,
-      display: '$300/Month',
+      amount: 0,
+      display: '',
       sessions: '2 Yoga + 1 Special per Month',
     },
     yearly: {
-      amount: 3420,
-      display: '$3,420/Year',
+      amount: 0,
+      display: '',
       sessions: '24 Yoga + 12 Special per Year',
       savings: '5% off',
     },
@@ -110,6 +111,8 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
   
   // ✅ BILLING TYPE STATE
   const [billingType, setBillingType] = useState<'monthly' | 'yearly'>('monthly');
+  const [apiPlans, setApiPlans] = useState<any[]>([]);
+  const [isLoadingApiPlans, setIsLoadingApiPlans] = useState(false);
 
   const { setPricingPlan, pricingPlan } = useOnboardingStore();
   const dispatch = useDispatch<any>();
@@ -127,6 +130,34 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
       if (pollingInterval) clearInterval(pollingInterval);
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setIsLoadingApiPlans(true);
+        const res = await profileService.getPlans();
+        const apiPlans = res?.data?.data || res?.data?.plans || res?.data || [];
+        if (Array.isArray(apiPlans)) setApiPlans(apiPlans);
+      } catch (e) {
+        console.error('Error loading plans from API', e);
+      } finally {
+        setIsLoadingApiPlans(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
+
+  const getApiPlanKey = (planName?: string) => {
+    const normalized = String(planName || '').toLowerCase();
+    if (normalized.includes('gold-yoga')) return 'gold';
+    if (normalized.includes('gold-zumba')) return 'gold';
+    if (normalized.includes('gold-mixed')) return 'gold';
+    if (normalized.includes('diamond')) return 'diamond';
+    if (normalized.includes('platinum')) return 'platinum';
+    if (normalized.includes('gold')) return 'gold';
+    return normalized || '';
+  };
 
   /**
    * Poll /me API every 60 seconds for 10 minutes (fallback if Socket.io fails)
@@ -346,7 +377,24 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
     }
 
     // Get pricing based on selected billing type
-    const pricing = billingType === 'monthly' ? baseConfig.monthly : baseConfig.yearly;
+    let pricing = billingType === 'monthly' ? baseConfig.monthly : baseConfig.yearly;
+
+    // Try to override pricing with API values if available
+    try {
+      const apiPlan = apiPlans.find((p) => getApiPlanKey(p?.name) === (planId.includes('gold') ? 'gold' : planId));
+      if (apiPlan) {
+        const apiAmount = billingType === 'monthly' ? (apiPlan.monthlyPrice ?? apiPlan.price) : (apiPlan.yearlyPrice ?? apiPlan.annualPrice ?? apiPlan.price);
+        const numeric = Number(apiAmount || pricing.amount || 0);
+        pricing = {
+          ...pricing,
+          amount: numeric,
+          display: isFinite(numeric) ? `$${numeric}${billingType === 'monthly' ? '/Month' : '/Year'}` : pricing.display,
+        };
+      }
+    } catch (e) {
+      // ignore and fall back to hardcoded config
+      console.error('Error applying api plan override', e);
+    }
 
     return {
       id: planId.includes('gold') ? 'gold' : planId,

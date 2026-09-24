@@ -30,6 +30,7 @@ import { RootState } from '../../store';
 import { SubscriptionImages } from '../../assets/images/subscriptions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL as APP_API_BASE_URL } from '../../constants/api';
+import { profileService } from '../../services/profileService';
 
 const API_BASE_URL = APP_API_BASE_URL;
 
@@ -41,14 +42,14 @@ const PLAN_CONFIG = {
     badgeType: 'value',
     hasSubOptions: true,
     monthly: {
-      amount: 100,
-      display: '$100',
+      amount: 0,
+      display: '',
       period: 'Month',
       sessions: '2 Classes',
     },
     yearly: {
-      amount: 1140,
-      display: '$1,140',
+      amount: 0,
+      display: '',
       period: 'Year',
       sessions: '24 Classes',
       savings: 'Save 5%',
@@ -60,14 +61,14 @@ const PLAN_CONFIG = {
     badgeType: 'premium',
     hasSubOptions: false,
     monthly: {
-      amount: 200,
-      display: '$200',
+      amount: 0,
+      display: '',
       period: 'Month',
       sessions: '2 Yoga',
     },
     yearly: {
-      amount: 2280,
-      display: '$2,280',
+      amount: 0,
+      display: '',
       period: 'Year',
       sessions: '24 Yoga',
       savings: 'Save 5%',
@@ -79,14 +80,14 @@ const PLAN_CONFIG = {
     badgeType: 'value',
     hasSubOptions: false,
     monthly: {
-      amount: 300,
-      display: '$300',
+      amount: 0,
+      display: '',
       period: 'Month',
       sessions: '2 Yoga + 1 Special',
     },
     yearly: {
-      amount: 3420,
-      display: '$3,420',
+      amount: 0,
+      display: '',
       period: 'Year',
       sessions: '24 Yoga + 12 Special',
       savings: 'Save 5%',
@@ -116,6 +117,8 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
   const [selectedGoldOption, setSelectedGoldOption] = useState<number | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isListeningForPayment, setIsListeningForPayment] = useState(false);
+  const [apiPlans, setApiPlans] = useState<any[]>([]);
+  const [isLoadingApiPlans, setIsLoadingApiPlans] = useState(false);
   const [paymentTimeout, setPaymentTimeout] = useState<NodeJS.Timeout | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [pollingAttempts, setPollingAttempts] = useState(0);
@@ -139,6 +142,34 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
       if (pollingInterval) clearInterval(pollingInterval);
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        setIsLoadingApiPlans(true);
+        const res = await profileService.getPlans();
+        const apiPlans = res?.data?.data || res?.data?.plans || res?.data || [];
+        if (Array.isArray(apiPlans)) setApiPlans(apiPlans);
+      } catch (e) {
+        console.error('Error loading plans from API', e);
+      } finally {
+        setIsLoadingApiPlans(false);
+      }
+    };
+
+    loadPlans();
+  }, []);
+
+  const getApiPlanKey = (planName?: string) => {
+    const normalized = String(planName || '').toLowerCase();
+    if (normalized.includes('gold-yoga')) return 'gold';
+    if (normalized.includes('gold-zumba')) return 'gold';
+    if (normalized.includes('gold-mixed')) return 'gold';
+    if (normalized.includes('diamond')) return 'diamond';
+    if (normalized.includes('platinum')) return 'platinum';
+    if (normalized.includes('gold')) return 'gold';
+    return normalized || '';
+  };
 
   /**
    * Poll /me API every 60 seconds for 10 minutes (fallback if Socket.io fails)
@@ -328,8 +359,22 @@ const PricingScreen = ({ navigation }: { navigation: any }) => {
       baseConfig = PLAN_CONFIG.gold;
     }
 
-    const pricing =
-      billingType === 'monthly' ? baseConfig.monthly : baseConfig.yearly;
+    let pricing = billingType === 'monthly' ? baseConfig.monthly : baseConfig.yearly;
+
+    try {
+      const apiPlan = apiPlans.find((p) => getApiPlanKey(p?.name) === (planKey.includes('gold') ? 'gold' : planKey));
+      if (apiPlan) {
+        const apiAmount = billingType === 'monthly' ? (apiPlan.monthlyPrice ?? apiPlan.price) : (apiPlan.yearlyPrice ?? apiPlan.annualPrice ?? apiPlan.price);
+        const numeric = Number(apiAmount || pricing.amount || 0);
+        pricing = {
+          ...pricing,
+          amount: numeric,
+          display: isFinite(numeric) ? `$${numeric}` : pricing.display,
+        };
+      }
+    } catch (e) {
+      console.error('Error applying api plan override', e);
+    }
 
     return {
       id: planKey.includes('gold') ? 'gold' : planKey,

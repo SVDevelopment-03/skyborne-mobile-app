@@ -10,6 +10,8 @@ import {
   ImageSourcePropType,
   Modal,
   TextInput,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { initPaymentSheet, presentPaymentSheet } from '@stripe/stripe-react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -22,10 +24,11 @@ import {
   confirmCardSetupIntent,
   getStoredPaymentDetails,
   verifyPayment,
+  paymentService,
 } from '../../services/paymentService';
+import { appleIAPService, AppleProduct as AppleProductType } from '../../services/appleIAPService';
 import { profileService } from '../../services/profileService';
 import Toast from 'react-native-toast-message';
-import AppleIAPSection from '../../components/AppleIAPSection';
 
 interface BillingInfo {
   label: string;
@@ -68,6 +71,11 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
 
   const [billingInfo, setBillingInfo] = useState<BillingInfo[]>([]);
   const [plans, setPlans] = useState<ApiPlan[]>([]);
+  // Apple IAP state
+  const [appleProducts, setAppleProducts] = useState<AppleProductType[]>([]);
+  const [isLoadingAppleProducts, setIsLoadingAppleProducts] = useState(false);
+  const [isAppleProcessing, setIsAppleProcessing] = useState(false);
+  const [selectedAppleProductId, setSelectedAppleProductId] = useState<string | null>(null);
 
   const getApiPlanKey = (planName?: string) => {
     const normalized = String(planName || '').toLowerCase();
@@ -122,6 +130,32 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
     };
 
     loadPlans();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      const loadAppleProducts = async () => {
+        try {
+          setIsLoadingAppleProducts(true);
+          const response = await paymentService.getAppleProducts();
+
+          if (response?.success && response.data) {
+            setAppleProducts(response.data);
+          }
+        } catch (error: any) {
+          console.error('❌ Error loading Apple products:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Error loading products',
+            text2: error.message || 'Unable to load Apple IAP products',
+          });
+        } finally {
+          setIsLoadingAppleProducts(false);
+        }
+      };
+
+      loadAppleProducts();
+    }
   }, []);
 
   useEffect(() => {
@@ -346,6 +380,74 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
+  const handlePurchaseAppleProduct = async (product: AppleProductType) => {
+    if (!user?._id) {
+      Toast.show({ type: 'error', text1: 'Not authenticated', text2: 'Please login to make a purchase.' });
+      return;
+    }
+
+    try {
+      setIsAppleProcessing(true);
+      setSelectedAppleProductId(product.productId);
+
+      await appleIAPService.initializeIAP();
+      const purchase = await appleIAPService.requestSubscription(product.productId);
+
+      if (!purchase) {
+        setIsAppleProcessing(false);
+        setSelectedAppleProductId(null);
+        return;
+      }
+
+      const validationResponse = await paymentService.validateAppleReceipt(purchase.transactionReceipt, user._id);
+
+      if (validationResponse?.success) {
+        await appleIAPService.finishPurchase(purchase);
+        Toast.show({ type: 'success', text1: 'Purchase successful!', text2: `You now have access to ${product.title}` });
+        await Promise.all([loadProfile(), fetchSubscription(), fetchHistory()]);
+      } else {
+        throw new Error(validationResponse.message || 'Receipt validation failed');
+      }
+    } catch (error: any) {
+      console.error('❌ Purchase error:', error);
+      Toast.show({ type: 'error', text1: 'Purchase failed', text2: error.message || 'Unable to complete purchase' });
+    } finally {
+      setIsAppleProcessing(false);
+      setSelectedAppleProductId(null);
+    }
+  };
+
+  const handleRestoreApplePurchases = async () => {
+    if (!user?._id) {
+      Toast.show({ type: 'error', text1: 'Not authenticated', text2: 'Please login to restore purchases.' });
+      return;
+    }
+
+    try {
+      setIsAppleProcessing(true);
+      await appleIAPService.initializeIAP();
+      const purchases = await appleIAPService.restorePurchases();
+
+      if (!purchases || purchases.length === 0) {
+        Toast.show({ type: 'info', text1: 'No purchases to restore', text2: 'You have no previous purchases to restore.' });
+        return;
+      }
+
+      const latest = purchases[0];
+      const restoreResponse = await paymentService.validateAppleReceipt(latest.transactionReceipt, user._id);
+
+      if (restoreResponse?.success) {
+        Toast.show({ type: 'success', text1: 'Purchases restored!', text2: 'Your Apple subscription is active again.' });
+        await Promise.all([loadProfile(), fetchSubscription(), fetchHistory()]);
+      }
+    } catch (error: any) {
+      console.error('❌ Restore error:', error);
+      Toast.show({ type: 'error', text1: 'Restore failed', text2: error.message || 'Unable to restore purchases' });
+    } finally {
+      setIsAppleProcessing(false);
+    }
+  };
+
   const settingOptions: SettingOption[] = [
     {
       id: 1,
@@ -525,12 +627,7 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
           ))}
         </View> */}
 
-        {/* ✅ APPLE IN-APP PURCHASE SECTION */}
-        <AppleIAPSection userId={user?._id} onPurchaseSuccess={() => {
-          loadProfile();
-          fetchSubscription();
-          fetchHistory();
-        }} />
+        {/* Apple IAP UI intentionally hidden here to avoid separate cards */}
 
         {/* Settings Options */}
         <View style={styles.settingsContainer}>
@@ -1049,6 +1146,89 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 20,
+  },
+  // Apple IAP styles (reuse some existing style names from component)
+  appleContainer: {
+    paddingHorizontal: 16,
+    marginVertical: 24,
+  },
+  appleSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F1F1F',
+    marginBottom: 8,
+  },
+  appleSectionSubtitle: {
+    fontSize: 13,
+    color: '#6B6B6B',
+    marginBottom: 16,
+  },
+  productsScroll: {
+    marginBottom: 16,
+  },
+  productsContainer: {
+    paddingRight: 16,
+  },
+  productCard: {
+    borderRadius: 16,
+    padding: 16,
+    width: 240,
+    marginRight: 12,
+    justifyContent: 'space-between',
+  },
+  productHeader: {
+    marginBottom: 12,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  productBillingType: {
+    fontSize: 12,
+    color: '#F0F0F0',
+  },
+  productPrice: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  productPlan: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#F0F0F0',
+    marginBottom: 12,
+  },
+  purchaseButton: {
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  purchaseButtonDisabled: {
+    opacity: 0.6,
+  },
+  purchaseButtonText: {
+    color: '#B95E82',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  restoreButton: {
+    borderWidth: 2,
+    borderColor: '#B95E82',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  restoreButtonText: {
+    color: '#B95E82',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
