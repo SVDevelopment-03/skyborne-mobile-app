@@ -26,7 +26,9 @@ import { socialLoginService } from '../../services/authService';
 import { normalizeErrorMessage } from '../../utils/errorUtils';
 import { useFocusEffect } from '@react-navigation/native';
 import PolicyModal from '../../components/PolicyModal';
-
+import { Check } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BackArrowIcon from '../../components/BackArrowIcon';
 const TERMS_URL = 'https://skybornedrop.com/terms';
 const COOKIE_POLICY_URL = 'https://skybornedrop.com/cookie-policy';
 
@@ -58,6 +60,8 @@ const validationSchema = Yup.object().shape({
 });
 
 export default function LoginScreen({ navigation }: Props) {
+  // Keeps the bottom of the form clear of the Android navigation bar.
+  const insets = useSafeAreaInsets();
   const { login, isLoading } = useAuthViewModel();
   const dispatch = useDispatch<any>();
   const [loginError, setLoginError] = useState<string>('');
@@ -437,11 +441,7 @@ const onSubmit = async (
               }
             }}
           >
-            <Image
-              source={{uri:'https://skyborne-images.s3.ap-south-1.amazonaws.com/back-arrow.png'}}
-              style={{ width: 16, height: 16, marginHorizontal: 16 }}
-              resizeMode="contain"
-            />
+            <BackArrowIcon style={{ marginHorizontal: 16 }} />
           </TouchableOpacity>
 
           <View style={styles.appBarCenter}>
@@ -466,12 +466,22 @@ const onSubmit = async (
         {/* SCROLLABLE CONTENT */}
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 16 + insets.bottom },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.container}>
-            <Text style={styles.title}>Welcome Back to Skyborne</Text>
+            <Text
+              style={styles.title}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              Welcome Back to Skyborne
+            </Text>
             <Text style={styles.subtitle}>Login to continue your wellness journey</Text>
 
             {/* Show general login error if exists */}
@@ -559,7 +569,7 @@ const onSubmit = async (
 
                   <TouchableOpacity 
                     onPress={() => navigation.navigate('ForgotPasswordEmail')}
-                    style={{ alignSelf: 'flex-end', marginTop: 8, marginBottom: 16 }}
+                    style={{ alignSelf: 'flex-end', marginTop: 0, marginBottom: 4 }}
                     disabled={appleLoading || googleLoading || isSubmitting || isLoading}
                   >
                     <Text style={{ 
@@ -582,7 +592,11 @@ const onSubmit = async (
                         styles.checkbox,
                         values.agreeTerms && styles.checkboxChecked,
                       ]}
-                    />
+                    >
+                      {values.agreeTerms && (
+                        <Check size={13} color="#FFFFFF" strokeWidth={3} />
+                      )}
+                    </View>
                     <Text style={styles.termsText}>
                       I agree to Skyborne's{' '}
                       <Text
@@ -683,11 +697,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appBar: {
-    minHeight: 120,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 70,
-    paddingBottom: 43,
+    paddingTop: 48,
+    paddingBottom: 16,
   },
   backBtn: {
     width: 32,
@@ -704,8 +717,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 60,
-    height: 65,
+    width: 48,
+    height: 52,
     resizeMode: 'contain',
     marginRight: 6,
   },
@@ -718,22 +731,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    flexGrow: 1,
+    // Centers the form in the space below the app bar when it fits.
+    justifyContent: 'center',
   },
   container: {
     paddingHorizontal: 24,
   },
   title: {
-    fontSize: 30,
+    fontSize: 28,
     color: '#494949',
     marginBottom: 8,
-    maxWidth: '80%',
     fontFamily: FontFamilies.SatoshiBold,
   },
   subtitle: {
     fontSize: 14,
     color: '#666666',
-    marginBottom: 20,
+    marginBottom: 8,
     fontFamily: FontFamilies.SatoshiRegular,
   },
   errorContainer: {
@@ -766,8 +780,8 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: '#494949',
-    marginBottom: 8,
-    marginTop: 14,
+    marginBottom: 6,
+    marginTop: 8,
     fontFamily: FontFamilies.SatoshiMedium,
   },
   passwordContainer: {
@@ -786,12 +800,14 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 18,
+    marginVertical: 12,
   },
   checkbox: {
-    width: 16,
-    height: 16,
+    width: 18,
+    height: 18,
     borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#ccc',
     borderStyle: 'solid',
@@ -827,7 +843,7 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 12,
   },
   divider: {
     flex: 1,
@@ -843,12 +859,12 @@ const styles = StyleSheet.create({
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 54,
+    height: 50,
     borderRadius: 28,
     borderWidth: 1,
     borderColor: '#D7D7D7',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   googleButtonIcon: {
     width: 20,
@@ -865,7 +881,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 4,
   },
   signupText: {
     fontSize: 14,

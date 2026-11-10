@@ -83,8 +83,9 @@ android {
         applicationId "com.skyborne.drop"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 40
+        versionName "1.0.40"
+        missingDimensionStrategy "store", "play"
     }
     signingConfigs {
         debug {

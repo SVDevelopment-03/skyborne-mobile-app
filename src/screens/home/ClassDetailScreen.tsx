@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { ArrowLeft, Video, VideoOff } from 'lucide-react-native';
+import { ArrowLeft, Video, VideoOff, Clock, Timer, Signal } from 'lucide-react-native';
 import GradientBackground from '../../components/GradientBackground';
 import { useClassDetailsViewModel } from '../../viewmodels/useClassDetailsViewModel';
 import { useJoinMeeting } from '../../viewmodels/useJoinMeeting';
@@ -56,6 +56,7 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({
   const { getClassDetails } = useClassDetailsViewModel();
   const {
     joinMeeting,
+    getRecordingLink,
     isJoining,
     error: joinError,
     clearError: clearJoinError,
@@ -159,24 +160,22 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({
 
     try {
       clearJoinError();
-      const { accessUrl: joinUrl, recordUrl }: any = await joinMeeting(classId);
 
-      console.log('Join URL:', joinUrl);
-      console.log('Record URL:', recordUrl);
-
+      // Past class: ask for a playback link. /meetings/join refuses completed
+      // classes, which is why "Watch Recording" used to show "Join Failed".
+      // getRecordingLink shows the server's reason itself when it fails.
       if (showRecordingCta) {
-        const playbackUrl = recordUrl || classDetails?.recordingUrl;
-        if (!playbackUrl) {
-          Alert.alert(
-            'Recording Unavailable',
-            'Recording not found for this session.',
-          );
-          return;
-        }
+        const playbackUrl = await getRecordingLink(classId);
+        if (!playbackUrl) return;
         setVideoUrl(playbackUrl);
         setShowVideoPlayer(true);
         return;
       }
+
+      const joinResult: any = await joinMeeting(classId);
+      // joinMeeting already showed the server's reason when it returns null.
+      if (!joinResult) return;
+      const joinUrl = joinResult.accessUrl;
 
       if (joinUrl) {
         try {
@@ -430,12 +429,7 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({
           <View style={styles.detailsCard}>
             <View style={styles.detailItem}>
               <View style={styles.detailIconBox}>
-                <Image
-                  source={{
-                    uri: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/time.png',
-                  }}
-                  style={styles.detailIcon}
-                />
+                <Clock size={20} color="#B95E82" strokeWidth={2.25} />
               </View>
               <Text style={styles.detailLabel}>Time</Text>
               <Text style={styles.detailValue}>{time}</Text>
@@ -443,12 +437,7 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({
 
             <View style={styles.detailItem}>
               <View style={styles.detailIconBox}>
-                <Image
-                  source={{
-                    uri: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/time.png',
-                  }}
-                  style={styles.detailIcon}
-                />
+                <Timer size={20} color="#B95E82" strokeWidth={2.25} />
               </View>
               <Text style={styles.detailLabel}>Duration</Text>
               <Text style={styles.detailValue}>
@@ -458,12 +447,7 @@ const ClassDetailsScreen: React.FC<ClassDetailsScreenProps> = ({
 
             <View style={styles.detailItem}>
               <View style={styles.detailIconBox}>
-                <Image
-                  source={{
-                    uri: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/time.png',
-                  }}
-                  style={styles.detailIcon}
-                />
+                <Signal size={20} color="#B95E82" strokeWidth={2.25} />
               </View>
               <Text style={styles.detailLabel}>Level</Text>
               <Text style={styles.detailValue}>

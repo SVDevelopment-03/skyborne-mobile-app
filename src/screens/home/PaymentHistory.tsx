@@ -18,7 +18,7 @@ import BottomNav from '../../components/BottomNav';
 import { useProfileViewModel } from '../../viewmodels/useProfileViewModel';
 import { useEffect } from 'react';
 import { CircleDollarSign ,Calendar1,ArrowRightLeft, Notebook} from 'lucide-react-native';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 interface StatCard {
   id: number;
   value: string;
@@ -164,10 +164,7 @@ const PaymentHistory = () => {
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
-              <Image
-                style={styles.backIcon}
-                source={ProfileImages.ArrowIcon1}
-              />
+              <BackArrowIcon />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Payment History</Text>
           </View>

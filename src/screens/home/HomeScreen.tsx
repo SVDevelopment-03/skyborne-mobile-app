@@ -1116,7 +1116,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </View>
 
                 <View style={styles.weekDays}>
-                  {weeklyActivity?.days.map((d, index) => (
+                  {(weeklyActivity?.days ?? []).map((d, index) => (
                     <TouchableOpacity
                       key={index}
                       style={[

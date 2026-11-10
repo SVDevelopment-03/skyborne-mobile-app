@@ -1,6 +1,12 @@
 
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
@@ -12,9 +18,11 @@ import {
   ImageBackground,
   Image,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { ScheduleImages } from '../../assets/images/schedule';
 import BottomNav from '../../components/BottomNav';
 import {
@@ -38,12 +46,40 @@ interface WeeklyScheduleScreenProps {
   navigation: WeeklyScheduleNavigationProp;
 }
 
-interface WeekDay {
-  day: string;
-  date: number;
-  dayIndex: number;
-  dateKey: string;
-}
+// Completed and Upcoming show every session, with no date limit. Classes run
+// on alternate Saturdays, so a single calendar week is often empty.
+const SCHEDULE_PAST_DAYS = 'all';
+const SCHEDULE_FUTURE_DAYS = 'all';
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_LABELS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const getScheduleRegionParam = async (): Promise<string | undefined> => {
+  try {
+    const { regionName, regionCode } = await fetchLoggedInUserCountryRegion();
+    if (regionName?.trim()) return regionName.trim();
+    if (regionCode?.trim()) return regionCode.trim();
+  } catch (error) {
+    console.warn('Failed to get region from country mapping:', error);
+  }
+
+  try {
+    const { region, code } = await fetchLoggedInUserRegion();
+    if (region?.trim()) return region.trim();
+    if (code?.trim()) return code.trim();
+  } catch (error) {
+    console.warn('Failed to get fallback region from user profile:', error);
+  }
+
+  return undefined;
+};
 
 const normalizeRegionLabel = (value: string = ''): string => {
   const raw = value.trim().toLowerCase();
@@ -63,50 +99,31 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const [selectedDate, setSelectedDate] = useState<number>(
-    new Date().getDate(),
-  );
+  // Selected day is tracked by its full date key (YYYY-MM-DD), not the day of
+  // the month, so dates in different months never collide.
+  const [selectedDateKey, setSelectedDateKey] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>(
     'upcoming',
   );
-  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [weeklyMeetings, setWeeklyMeetings] = useState<Meeting[]>([]);
   const [userPlan, setUserPlan] = useState<string>('');
   const [userRegionParam, setUserRegionParam] = useState<string>('');
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Re-read on every fetch so the upcoming/completed split uses a fresh "now".
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const hasLoadedOnce = useRef(false);
 
   const getLocalDateKey = useCallback((value: Date | string) => {
     const date = value instanceof Date ? value : new Date(value);
     if (isNaN(date.getTime())) return null;
-
-    const formatOptions: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    };
-
-    try {
-      return new Intl.DateTimeFormat('en-CA', formatOptions).format(date);
-    } catch {
-      return new Intl.DateTimeFormat('en-CA', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(date);
-    }
-  }, []);
-
-  // Initialize week data
-  useEffect(() => {
-    initializeWeek();
-  }, []);
-
-  // Fetch weekly meetings
-  useEffect(() => {
-    fetchWeeklyMeetings();
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }, []);
 
   useEffect(() => {
@@ -125,78 +142,64 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
     };
   }, []);
 
-  const initializeWeek = () => {
-    const currentDate = new Date();
-    const currentDay = currentDate.getDay();
-    const firstDayOfWeek = new Date(currentDate);
-    firstDayOfWeek.setDate(currentDate.getDate() - currentDay);
+  const fetchWeeklyMeetings = useCallback(
+    async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
+      try {
+        if (mode === 'initial') setIsLoading(true);
+        if (mode === 'refresh') setIsRefreshing(true);
+        if (mode !== 'silent') setError(null);
 
-    const days: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const newWeekData: WeekDay[] = days.map((day, index) => {
-      const date = new Date(firstDayOfWeek);
-      date.setDate(firstDayOfWeek.getDate() + index);
-      const dateKey = getLocalDateKey(date) || '';
+        const regionParam = await getScheduleRegionParam();
+        setUserRegionParam(regionParam || '');
+        const response: MeetingsResponse =
+          await weeklyScheduleService.getWeeklyMeetings(regionParam, {
+            pastDays: SCHEDULE_PAST_DAYS,
+            futureDays: SCHEDULE_FUTURE_DAYS,
+          });
 
-      return {
-        day,
-        date: date.getDate(),
-        dayIndex: index,
-        dateKey,
-      };
-    });
-
-    setWeekDays(newWeekData);
-    setSelectedDate(currentDate.getDate());
-  };
-
-  const getRegionParam = async (): Promise<string | undefined> => {
-    try {
-      const { regionName, regionCode } = await fetchLoggedInUserCountryRegion();
-      if (regionName?.trim()) return regionName.trim();
-      if (regionCode?.trim()) return regionCode.trim();
-    } catch (error) {
-      console.warn('Failed to get region from country mapping:', error);
-    }
-
-    try {
-      const { region, code } = await fetchLoggedInUserRegion();
-      if (region?.trim()) return region.trim();
-      if (code?.trim()) return code.trim();
-    } catch (error) {
-      console.warn('Failed to get fallback region from user profile:', error);
-    }
-
-    return undefined;
-  };
-
-  const fetchWeeklyMeetings = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const regionParam = await getRegionParam();
-      setUserRegionParam(regionParam || '');
-      const response: MeetingsResponse =
-        await weeklyScheduleService.getWeeklyMeetings(regionParam);
-
-      if (response.success) {
-        setWeeklyMeetings(response.meetings || []);
-        setUserPlan(response.userPlan || '');
-      } else {
-        setError('Failed to load meetings');
+        if (response.success) {
+          setWeeklyMeetings(response.meetings || []);
+          setUserPlan(response.userPlan || '');
+          setError(null);
+        } else if (mode !== 'silent') {
+          setError('Failed to load meetings');
+        }
+      } catch (err) {
+        console.error('Error fetching meetings:', err);
+        // A failed background refresh keeps the schedule already on screen.
+        if (mode !== 'silent') {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+        }
+      } finally {
+        setNowTick(Date.now());
+        setIsLoading(false);
+        setIsRefreshing(false);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      console.error('Error fetching meetings:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [],
+  );
 
+  // Load on first open, then refresh quietly each time the screen is focused
+  // so the schedule does not go stale while the app stays in memory.
+  useFocusEffect(
+    useCallback(() => {
+      fetchWeeklyMeetings(hasLoadedOnce.current ? 'silent' : 'initial');
+      hasLoadedOnce.current = true;
+    }, [fetchWeeklyMeetings]),
+  );
+
+  // The session's start as a full timestamp. meeting.localTime is an ISO date;
+  // regions[].localTime is display text such as "02:15 PM" with no date, so it
+  // is used only when it parses as a full date (otherwise every session would
+  // be dropped from the list).
   const getMeetingEffectiveLocalTime = useCallback(
     (meeting: Meeting): string | undefined => {
       if (!meeting) return undefined;
+      const isFullDate = (v: unknown) =>
+        !!v && !isNaN(new Date(String(v)).getTime());
+
+      if (isFullDate(meeting?.localTime)) return String(meeting.localTime);
+
       const candidate = String(userRegionParam || '').trim();
       if (candidate && Array.isArray(meeting?.regions) && meeting.regions.length > 0) {
         const normalizedCandidate = normalizeRegionLabel(candidate);
@@ -204,15 +207,15 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
           const regionValue = normalizeRegionLabel(String(r?.region || ''));
           return regionValue && regionValue === normalizedCandidate;
         });
-        if (matched?.localTime) return String(matched.localTime);
+        if (isFullDate(matched?.localTime)) return String(matched!.localTime);
       }
 
-      if (Array.isArray(meeting?.regions) && meeting.regions.length > 0) {
-        const firstWithTime = meeting.regions.find(r => !!r?.localTime);
-        if (firstWithTime?.localTime) return String(firstWithTime.localTime);
+      if (Array.isArray(meeting?.regions)) {
+        const firstWithDate = meeting.regions.find(r => isFullDate(r?.localTime));
+        if (firstWithDate?.localTime) return String(firstWithDate.localTime);
       }
 
-      return meeting?.localTime ? String(meeting.localTime) : undefined;
+      return undefined;
     },
     [userRegionParam],
   );
@@ -225,7 +228,7 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
   );
 
   const handleRetry = () => {
-    fetchWeeklyMeetings();
+    fetchWeeklyMeetings('initial');
   };
 
   const getFormattedTime = (
@@ -241,14 +244,10 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
       return { time: 'Invalid', period: '' };
     }
 
-    const formatted = date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-
-    const [time, period] = formatted.split(' ');
-    return { time: time || 'N/A', period: period || '' };
+    const hours24 = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+    return { time: `${hours12}:${minutes}`, period: hours24 < 12 ? 'AM' : 'PM' };
   };
 
   const getSessionColor = (
@@ -259,72 +258,101 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
       : { backgroundColor: '#B95E82', color: '#FFFFFF' };
   };
 
+  // A class counts as completed once it has ended (start + duration), or when
+  // the backend marks it completed/failed. "pending" alone is not trusted:
+  // some past classes never get their end webhook and would otherwise stay in
+  // Upcoming forever.
   const isCompletedMeeting = useCallback(
     (meeting: Meeting): boolean => {
       const status = String(meeting?.status || '').toLowerCase();
       if (status === 'completed' || status === 'failed') return true;
-      if (status === 'pending') return false;
 
       const effectiveLocalTime = getMeetingEffectiveLocalTime(meeting);
       if (!effectiveLocalTime) return false;
-      const meetingTime = new Date(effectiveLocalTime);
-      if (isNaN(meetingTime.getTime())) return false;
-      return meetingTime.getTime() < Date.now();
+      const start = new Date(effectiveLocalTime).getTime();
+      if (isNaN(start)) return false;
+      const durationMin =
+        Number(meeting?.duration) > 0 ? Number(meeting.duration) : 60;
+      return start + durationMin * 60 * 1000 < nowTick;
     },
-    [getMeetingEffectiveLocalTime],
+    [getMeetingEffectiveLocalTime, nowTick],
   );
 
+  const matchesSearch = useCallback(
+    (meeting: Meeting) => {
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      return [meeting?.title, meeting?.service?.title, meeting?.trainer?.name]
+        .map(v => String(v || '').toLowerCase())
+        .some(v => v.includes(q));
+    },
+    [searchQuery],
+  );
+
+  // Meetings in the active tab with their local date. Upcoming is soonest
+  // first; Completed is most recent first.
   const tabMeetings = useMemo(() => {
-    return weeklyMeetings.filter(m => {
-      if (!m) return false;
-      const completed = isCompletedMeeting(m);
-      return activeTab === 'completed' ? completed : !completed;
-    });
-  }, [weeklyMeetings, activeTab, isCompletedMeeting]);
-
-  const displayWeekDays = useMemo(() => {
-    return weekDays.filter(d => {
-      if (!d?.dateKey) return false;
-      return tabMeetings.some(
-        m => {
-          const effectiveLocalTime = m ? getMeetingEffectiveLocalTime(m) : undefined;
-          return !!effectiveLocalTime && getLocalDateKey(effectiveLocalTime) === d.dateKey;
-        },
-      );
-    });
-  }, [weekDays, tabMeetings, getLocalDateKey, getMeetingEffectiveLocalTime]);
-
-  useEffect(() => {
-    if (displayWeekDays.length === 0) return;
-    const exists = displayWeekDays.some(d => d.date === selectedDate);
-    if (!exists) setSelectedDate(displayWeekDays[0].date);
-  }, [displayWeekDays, selectedDate]);
-
-  // Filter meetings for selected date (after displayWeekDays/tabMeetings are computed)
-  const selectedDay =
-    displayWeekDays.find(d => d.date === selectedDate) ||
-    displayWeekDays[0] ||
-    weekDays.find(d => d.date === selectedDate);
-  const selectedDateKey = selectedDay?.dateKey;
-
-  const selectedDayMeetings = tabMeetings.filter(meeting => {
-    if (!selectedDateKey) return false;
-    const effectiveLocalTime = getMeetingEffectiveLocalTime(meeting);
-    if (!effectiveLocalTime) return false;
-    return getLocalDateKey(effectiveLocalTime) === selectedDateKey;
-  });
-
-  // Filter by search query
-  const filteredMeetings = selectedDayMeetings.filter(meeting => {
-    if (!searchQuery.trim()) return true;
-    const searchLower = searchQuery.toLowerCase();
-
-    return (
-      meeting.title.toLowerCase().includes(searchLower) ||
-      meeting.service?.title.toLowerCase().includes(searchLower) ||
-      meeting.trainer?.name.toLowerCase().includes(searchLower)
+    const rows = weeklyMeetings
+      .filter(m => !!m && matchesSearch(m))
+      .filter(m =>
+        activeTab === 'completed'
+          ? isCompletedMeeting(m)
+          : !isCompletedMeeting(m),
+      )
+      .map(m => {
+        const t = getMeetingEffectiveLocalTime(m);
+        const time = t ? new Date(t).getTime() : NaN;
+        return { meeting: m, time, dateKey: t ? getLocalDateKey(t) : null };
+      })
+      .filter(r => !!r.dateKey && !isNaN(r.time));
+    rows.sort((a, b) =>
+      activeTab === 'completed' ? b.time - a.time : a.time - b.time,
     );
-  });
+    return rows;
+  }, [
+    weeklyMeetings,
+    activeTab,
+    isCompletedMeeting,
+    matchesSearch,
+    getMeetingEffectiveLocalTime,
+    getLocalDateKey,
+  ]);
+
+  // One date chip per day that has sessions in the active tab.
+  const displayDays = useMemo(() => {
+    const seen = new Set<string>();
+    const days: { dateKey: string; date: Date }[] = [];
+    tabMeetings.forEach(r => {
+      if (!r.dateKey || seen.has(r.dateKey)) return;
+      seen.add(r.dateKey);
+      days.push({ dateKey: r.dateKey, date: new Date(r.time) });
+    });
+    return days;
+  }, [tabMeetings]);
+
+  // Keep the selection on a date that exists in the active tab.
+  useEffect(() => {
+    if (displayDays.length === 0) return;
+    if (!displayDays.some(d => d.dateKey === selectedDateKey)) {
+      setSelectedDateKey(displayDays[0].dateKey);
+    }
+  }, [displayDays, selectedDateKey]);
+
+  const selectedDay =
+    displayDays.find(d => d.dateKey === selectedDateKey) || displayDays[0];
+
+  const filteredMeetings = useMemo(() => {
+    if (!selectedDay) return [];
+    return tabMeetings
+      .filter(r => r.dateKey === selectedDay.dateKey)
+      .sort((a, b) => a.time - b.time)
+      .map(r => r.meeting);
+  }, [tabMeetings, selectedDay]);
+
+  const headerMonthLabel = (() => {
+    const d = selectedDay?.date || new Date();
+    return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+  })();
 
   const isLikelyId = (value: string) =>
     /^[a-f0-9]{24}$/i.test(value.trim()) ||
@@ -365,7 +393,7 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
   const displayPlan = getDisplayPlan();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -373,6 +401,14 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
           { paddingBottom: 160 + insets.bottom },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => fetchWeeklyMeetings('refresh')}
+            colors={['#B95E82']}
+            tintColor="#B95E82"
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -469,50 +505,63 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
             </TouchableOpacity>
           </View>
           <Text style={styles.calendarTitle}>
-            {new Date().toLocaleString('default', {
-              month: 'long',
-              year: 'numeric',
-            })}
+            {headerMonthLabel}
           </Text>
 
-          {/* Week Days and Dates */}
-          {displayWeekDays.length > 0 ? (
-            <View style={styles.weekContainer}>
-              {displayWeekDays.map(item => (
-                <View key={item.dateKey} style={styles.dayColumn}>
-                  <Text style={styles.dayLabel}>{item.day}</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.dateContainer,
-                      selectedDate === item.date && styles.dateContainerSelected,
-                    ]}
-                    onPress={() => setSelectedDate(item.date)}
-                  >
-                    <Text
-                      style={[
-                        styles.dateText,
-                        selectedDate === item.date && styles.dateTextSelected,
-                      ]}
-                    >
-                      {item.date}
+          {/* Dates that have sessions in the active tab */}
+          {isLoading ? null : displayDays.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.weekContainer}
+            >
+              {displayDays.map(item => {
+                const isSelected = selectedDay?.dateKey === item.dateKey;
+                return (
+                  <View key={item.dateKey} style={styles.dayColumn}>
+                    <Text style={styles.dayLabel}>
+                      {DAY_LABELS[item.date.getDay()]}
                     </Text>
-                    <View
+                    <TouchableOpacity
                       style={[
-                        styles.dotIndicator,
-                        selectedDate === item.date && styles.dotIndicatorSelected,
+                        styles.dateContainer,
+                        isSelected && styles.dateContainerSelected,
                       ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          ) : (
+                      onPress={() => setSelectedDateKey(item.dateKey)}
+                    >
+                      <Text
+                        style={[
+                          styles.dateText,
+                          isSelected && styles.dateTextSelected,
+                        ]}
+                      >
+                        {item.date.getDate()}
+                      </Text>
+                      <View
+                        style={[
+                          styles.dotIndicator,
+                          isSelected && styles.dotIndicatorSelected,
+                        ]}
+                      />
+                    </TouchableOpacity>
+                    <Text style={styles.monthLabel}>
+                      {MONTH_LABELS[item.date.getMonth()]}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          ) : !error ? (
             <View style={styles.noDatesContainer}>
               <Text style={styles.noDatesText}>
-                No {activeTab} sessions this week
+                {searchQuery.trim()
+                  ? `No ${activeTab} sessions match your search`
+                  : activeTab === 'upcoming'
+                  ? 'No upcoming sessions yet'
+                  : 'No completed sessions yet'}
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Loading State */}
@@ -534,19 +583,22 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
         )}
 
         {/* Sessions Schedule Card */}
-        {!isLoading && !error && (
+        {!isLoading && !error && selectedDay && (
           <View style={styles.scheduleCard}>
             {/* Card Header */}
             <View style={styles.scheduleHeader}>
               <View style={styles.scheduleHeaderLeft}>
                 <Text style={styles.scheduleDate}>
-                  {selectedDay?.day}, {selectedDate}
+                  {DAY_LABELS[selectedDay.date.getDay()]},{' '}
+                  {selectedDay.date.getDate()}{' '}
+                  {MONTH_LABELS[selectedDay.date.getMonth()]}
                 </Text>
               </View>
               <View style={styles.scheduleHeaderRight}>
                 <View style={styles.sessionsCountPill}>
                   <Text style={styles.sessionsCountPillText}>
-                    {filteredMeetings.length} Sessions
+                    {filteredMeetings.length}{' '}
+                    {filteredMeetings.length === 1 ? 'Session' : 'Sessions'}
                   </Text>
                 </View>
               </View>
@@ -563,10 +615,8 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
                     <View key={meeting._id}>
                       {/* Time Label */}
                       <View style={styles.timeRow}>
-                        <Text style={styles.timeLabel}>
-                          {time}
-                          {'\n'}
-                          {period}
+                        <Text style={styles.timeLabel} numberOfLines={1}>
+                          {time} {period}
                         </Text>
                         <View style={styles.timeDivider} />
                       </View>
@@ -580,34 +630,35 @@ const WeeklyScheduleScreen: React.FC<WeeklyScheduleScreenProps> = ({
                         onPress={() => handleClassPress(meeting._id)}
                         activeOpacity={0.7}
                       >
-                        {/* Left: Image and Trainer */}
-                        <View style={styles.sessionLeft}>
-                          <View style={styles.sessionImageContainer}>
-                            <ImageBackground
-                              source={ScheduleImages.SessionImage}
-                              style={styles.sessionImage}
-                              resizeMode="cover"
-                            />
-                          </View>
+                        {/* Left: Image */}
+                        <View style={styles.sessionImageContainer}>
+                          <ImageBackground
+                            source={ScheduleImages.SessionImage}
+                            style={styles.sessionImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+
+                        {/* Middle: Title, Duration and Trainer */}
+                        <View style={styles.sessionInfo}>
+                          <Text style={styles.sessionTitle} numberOfLines={2}>
+                            {meeting.title
+                              ?.toLowerCase()
+                              .replace(/\b\w/g, char => char.toUpperCase())}
+                          </Text>
+                          <Text style={styles.sessionDuration} numberOfLines={1}>
+                            {meeting.duration ? `${meeting.duration} min` : ''}
+                            {meeting.duration && meeting.service?.title ? ' · ' : ''}
+                            {meeting.service?.title || ''}
+                          </Text>
                           <Text
                             style={[
                               styles.sessionTrainer,
                               { color: colors.color },
                             ]}
+                            numberOfLines={1}
                           >
                             Trainer: {meeting?.trainer?.name || 'N/A'}
-                          </Text>
-                        </View>
-
-                        {/* Middle: Title and Duration */}
-                        <View style={styles.sessionInfo}>
-                          <Text style={styles.sessionTitle}>
-                            {meeting.title
-                              ?.toLowerCase()
-                              .replace(/\b\w/g, char => char.toUpperCase())}
-                          </Text>
-                          <Text style={styles.sessionDuration}>
-                            {meeting.duration} min - {meeting.service?.title}
                           </Text>
                         </View>
 
@@ -663,7 +714,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    marginTop: 35,
+    marginTop: 12,
     marginBottom: 25,
   },
   headerTitle: {
@@ -786,7 +837,16 @@ const styles = StyleSheet.create({
   },
   weekContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
+    paddingRight: 4,
+  },
+  monthLabel: {
+    fontFamily: 'Satoshi-Regular',
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: 'center',
+    color: '#959595',
+    marginTop: 4,
   },
   noDatesContainer: {
     paddingVertical: 18,
@@ -971,42 +1031,35 @@ const styles = StyleSheet.create({
   },
   timeRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 18,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   timeLabel: {
     fontFamily: 'Satoshi-Medium',
-    fontSize: 14,
-    lineHeight: 22,
-    textAlign: 'right',
+    fontSize: 13,
+    lineHeight: 18,
     color: '#000000',
-    width: 43,
-    marginLeft: -6,
   },
   timeDivider: {
     flex: 1,
     height: 1,
     backgroundColor: '#CCCCCC',
-    marginLeft: 20,
-    marginTop: 11,
+    marginLeft: 12,
   },
   sessionCard: {
     borderRadius: 12,
-    padding: 18,
-    marginBottom: 43,
+    padding: 14,
+    marginBottom: 24,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  sessionLeft: {
-    marginRight: 23,
+    alignItems: 'center',
   },
   sessionImageContainer: {
-    width: 81,
-    height: 81,
-    borderRadius: 5,
+    width: 64,
+    height: 64,
+    borderRadius: 6,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
-    marginBottom: 16,
+    marginRight: 14,
   },
   sessionImage: {
     width: '100%',
@@ -1014,33 +1067,29 @@ const styles = StyleSheet.create({
   },
   sessionInfo: {
     flex: 1,
-    justifyContent: 'flex-start',
-    paddingTop: 17,
+    justifyContent: 'center',
   },
   sessionTitle: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 20,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 21,
     color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   sessionDuration: {
     fontFamily: 'Satoshi-Regular',
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 18,
     color: '#FFFFFF',
+    marginBottom: 2,
   },
   sessionTrainer: {
     fontFamily: 'Satoshi-Medium',
-    position: 'absolute',
-    top: 95,
-    minWidth: 131,
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 18,
   },
   sessionPlayButton: {
-    marginTop: 85,
-    marginRight: 4,
+    marginLeft: 10,
   },
   playButtonCircle: {
     width: 28,

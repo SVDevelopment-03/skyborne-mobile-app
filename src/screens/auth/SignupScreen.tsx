@@ -13,7 +13,9 @@ import { useSignup } from '../../store/SignupContext';
 import Svg, { Path } from 'react-native-svg';
 import { EyeIcon, EyeOffIcon } from '../../icons/FormIcons';
 import PolicyModal from '../../components/PolicyModal';
-
+import { Check } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BackArrowIcon from '../../components/BackArrowIcon';
 const TERMS_URL = 'https://skybornedrop.com/terms';
 const COOKIE_POLICY_URL = 'https://skybornedrop.com/cookie-policy';
 
@@ -59,6 +61,8 @@ const validationSchema = Yup.object().shape({
 
 
 export default function SignupScreen({ navigation }: Props) {
+  // Keeps the bottom of the form clear of the Android navigation bar.
+  const insets = useSafeAreaInsets();
   const { formData, updateStepData, setCurrentStep } = useSignup();
   const [showPassword, setShowPassword] = useState(false);
   const [policyType, setPolicyType] = useState<'terms' | 'cookies' | null>(null);
@@ -109,13 +113,7 @@ export default function SignupScreen({ navigation }: Props) {
         {/* APP BAR */}
         <View style={styles.appBar}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Image
-              source={{
-                uri: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/back-arrow.png',
-              }}
-              style={{ width: 16, height: 16, marginHorizontal: 16 }}
-              resizeMode="contain"
-            />
+            <BackArrowIcon style={{ marginHorizontal: 16 }} />
           </TouchableOpacity>
 
           <View style={styles.appBarCenter}>
@@ -139,12 +137,23 @@ export default function SignupScreen({ navigation }: Props) {
 
         {/* SCROLLABLE CONTENT */}
         <ScrollView 
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            paddingBottom: 16 + insets.bottom,
+          }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.container}>
-            <Text style={styles.title}>Create Your Skyborne Account</Text>
+            <Text
+              style={styles.title}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              Create Your Skyborne Account
+            </Text>
 
             <Formik<FormData>
               initialValues={initialValues}
@@ -241,7 +250,11 @@ export default function SignupScreen({ navigation }: Props) {
                         styles.checkbox,
                         values.agreeTerms && styles.checkboxChecked,
                       ]}
-                    />
+                    >
+                      {values.agreeTerms && (
+                        <Check size={13} color="#FFFFFF" strokeWidth={3} />
+                      )}
+                    </View>
                     <Text style={styles.termsText}>
                       I agree to Skyborne's{' '}
                       <Text
@@ -295,11 +308,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appBar: {
-    minHeight: 120,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 70,
-    paddingBottom: 43,
+    paddingTop: 48,
+    paddingBottom: 16,
   },
   backBtn: {
     width: 32,
@@ -316,8 +328,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 60,
-    height: 65,
+    width: 48,
+    height: 52,
     resizeMode: 'contain',
     marginRight: 6,
   },
@@ -333,17 +345,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   title: {
-    fontSize: 30,
+    fontSize: 28,
     color: '#494949',
-    marginBottom: 42,
-    maxWidth: '80%',
+    marginBottom: 8,
     fontFamily: FontFamilies.SatoshiBold,
   },
   label: {
     fontSize: 14,
     color: '#494949',
-    marginBottom: 8,
-    marginTop: 14,
+    marginBottom: 6,
+    marginTop: 8,
     fontFamily: FontFamilies.SatoshiMedium,
   },
   passwordContainer: {
@@ -362,12 +373,14 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 18,
+    marginVertical: 12,
   },
   checkbox: {
-    width: 16,
-    height: 16,
+    width: 18,
+    height: 18,
     borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#ccc',
     borderStyle: 'solid',
@@ -403,7 +416,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
   },
   loginText: {
     fontSize: 14,

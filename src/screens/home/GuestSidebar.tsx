@@ -121,7 +121,7 @@ const GuestSidebar: React.FC<GuestSidebarProps> = ({
                     style={styles.ctaButton}
                     onPress={() => {
                       onClose();
-                      navigation.navigate('AuthOptions');
+                      navigation.navigate('Login');
                     }}
                     activeOpacity={0.8}
                   >

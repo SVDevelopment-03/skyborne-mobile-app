@@ -162,6 +162,49 @@ export function useJoinMeeting() {
   );
 
   /**
+   * Get a short-lived playback link for a past class's recording. This is the
+   * same endpoint the website uses. /meetings/join refuses completed classes,
+   * so it cannot be used for recordings. The server uses one credit the first
+   * time a member replays a class; later replays are free.
+   */
+  const getRecordingLink = useCallback(
+    async (meetingId: string): Promise<string | null> => {
+      if (!meetingId) return null;
+      setIsJoining(true);
+      setError(null);
+      try {
+        const api = createAxiosInstance();
+        const response: any = await api.get(
+          `/meetings/${meetingId}/recording-link`,
+        );
+        const url = response?.data?.data?.url;
+        if (!response?.data?.success || !url) {
+          throw new Error(
+            response?.data?.message || 'Recording not found for this session.',
+          );
+        }
+        return String(url);
+      } catch (err: any) {
+        const errorMsg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          'Recording is not available right now.';
+        setError(errorMsg);
+        Toast.show({
+          type: 'error',
+          text1: 'Recording Unavailable',
+          text2: errorMsg,
+        });
+        return null;
+      } finally {
+        setIsJoining(false);
+      }
+    },
+    [createAxiosInstance],
+  );
+
+  /**
    * Clear error state
    */
   const clearError = useCallback(() => {
@@ -170,6 +213,7 @@ export function useJoinMeeting() {
 
   return {
     joinMeeting,
+    getRecordingLink,
     isJoining,
     error,
     clearError,

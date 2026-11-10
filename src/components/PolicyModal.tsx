@@ -11,6 +11,32 @@ import { X } from 'lucide-react-native';
 import { FontFamilies } from '../constants/fonts';
 import { WebView } from 'react-native-webview';
 
+// The website's Terms and Cookie Policy pages start with the site header
+// (logo, Login, Signup). Inside the app that header is not useful, so hide
+// everything above the page title. Re-applied while the page hydrates.
+const HIDE_SITE_HEADER_JS = `
+(function () {
+  function hideHeader() {
+    var h1 = document.querySelector('h1');
+    if (!h1) return false;
+    var el = h1.previousElementSibling;
+    while (el) {
+      el.style.display = 'none';
+      el = el.previousElementSibling;
+    }
+    h1.style.marginTop = '16px';
+    return true;
+  }
+  hideHeader();
+  var tries = 0;
+  var timer = setInterval(function () {
+    hideHeader();
+    if (++tries > 20) clearInterval(timer);
+  }, 250);
+})();
+true;
+`;
+
 interface PolicyModalProps {
   visible: boolean;
   title: string;
@@ -52,6 +78,7 @@ const PolicyModal = ({
               javaScriptEnabled
               domStorageEnabled
               startInLoadingState
+              injectedJavaScript={HIDE_SITE_HEADER_JS}
               allowsBackForwardNavigationGestures
               style={styles.webView}
               renderLoading={() => (
@@ -121,6 +148,7 @@ const styles = StyleSheet.create({
   },
   webViewContainer: {
     height: 520,
+    flexShrink: 1,
     overflow: 'hidden',
     borderRadius: 16,
     borderWidth: 1,

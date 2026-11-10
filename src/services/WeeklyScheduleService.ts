@@ -99,7 +99,10 @@ class WeeklyScheduleService {
    * Fetch weekly meetings for all 7 days
    * Backend filters by user plan and region
    */
-  async getWeeklyMeetings(regionOverride?: string): Promise<MeetingsResponse> {
+  async getWeeklyMeetings(
+    regionOverride?: string,
+    range?: { pastDays?: number | 'all'; futureDays?: number | 'all' },
+  ): Promise<MeetingsResponse> {
     try {
       const regionParam =
         typeof regionOverride === 'string' && regionOverride.trim().length > 0
@@ -107,6 +110,9 @@ class WeeklyScheduleService {
           : await this.getRegionParam();
       const params: Record<string, string> = {};
       if (regionParam) params.region = regionParam;
+      if (range?.pastDays !== undefined) params.pastDays = String(range.pastDays);
+      if (range?.futureDays !== undefined)
+        params.futureDays = String(range.futureDays);
       console.log(
         '📅 Weekly meetings region param:',
         regionParam || '(missing)',
@@ -166,8 +172,10 @@ class WeeklyScheduleService {
 export const weeklyScheduleService = new WeeklyScheduleService();
 
 // Export functions for Redux thunks
-export const getWeeklyMeetings = (regionOverride?: string) =>
-  weeklyScheduleService.getWeeklyMeetings(regionOverride);
+export const getWeeklyMeetings = (
+  regionOverride?: string,
+  range?: { pastDays?: number | 'all'; futureDays?: number | 'all' },
+) => weeklyScheduleService.getWeeklyMeetings(regionOverride, range);
 
 export const getMeetingsByDay = (dayIndex: number) =>
   weeklyScheduleService.getMeetingsByDay(dayIndex);

@@ -4,7 +4,7 @@ import GradientBackground from '../../components/GradientBackground';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Button from '../../components/Button';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 const { width } = Dimensions.get('window');
 
 type Props = {
@@ -37,7 +37,7 @@ const OnboardingTimeCommitmentScreen = ({ navigation }: Props)  => {
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.backIcon}>‹</Text>
+              <BackArrowIcon />
             </TouchableOpacity>
 
             <View style={styles.progressTrack}>

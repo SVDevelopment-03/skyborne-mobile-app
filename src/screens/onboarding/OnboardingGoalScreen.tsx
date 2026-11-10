@@ -8,7 +8,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useDispatch } from 'react-redux';
 import { setOnboardingCompleted } from '../../store/authSlice';
 import GradientBackground from '../../components/GradientBackground';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 type Props = NativeStackScreenProps<RootStackParamList, 'OnboardingGoal'>;
 
 const GOALS = [
@@ -39,13 +39,7 @@ export default function OnboardingGoalScreen({ navigation }: Props) {
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Image
-              source={{
-                uri: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/back-arrow.png',
-              }}
-              style={{ width: 16, height: 16, marginHorizontal: 16 }}
-              resizeMode="contain"
-            />
+            <BackArrowIcon style={{ marginHorizontal: 16 }} />
           </TouchableOpacity>
 
           <View style={styles.progressTrack}>

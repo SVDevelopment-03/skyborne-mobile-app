@@ -16,9 +16,11 @@ import { ArrowLeft, Mail } from 'lucide-react-native';
 import { useForgotPasswordViewModel } from '../../viewmodels/useForgotPasswordViewModel';
 import Toast from 'react-native-toast-message';
 import { Images } from '../../assets/images';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { normalizeErrorMessage } from '../../utils/errorUtils';
 
 const ForgotPasswordEmailScreen = ({ navigation }: { navigation: any }) => {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const { sendPasswordResetOTP, isLoading } = useForgotPasswordViewModel();
 
@@ -82,8 +84,8 @@ const ForgotPasswordEmailScreen = ({ navigation }: { navigation: any }) => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.container}>
-            {/* Header */}
+          <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
+            {/* Header: back button only */}
             <View style={styles.header}>
               <TouchableOpacity
                 onPress={() => navigation.goBack()}
@@ -91,66 +93,65 @@ const ForgotPasswordEmailScreen = ({ navigation }: { navigation: any }) => {
               >
                 <ArrowLeft size={24} color="#494949" />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Forgot Password</Text>
-              <View style={{ width: 24 }} />
             </View>
 
-            {/* Logo or Image */}
-           
-            <Mail
-              size={36} // adjust based on your design
-              color="#B95E82" // change to your theme color
-              strokeWidth={2}
-              style={styles.logo}
-            />
-
-            {/* Title */}
-            <Text style={styles.title}>Reset Your Password</Text>
-
-            {/* Description */}
-            <Text style={styles.description}>
-              Enter your email address and we'll send you a verification code to
-              reset your password
-            </Text>
-
-            {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#999999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!isLoading}
+            {/* Content, centered vertically below the back button */}
+            <View style={styles.body}>
+              <Mail
+                size={36} // adjust based on your design
+                color="#B95E82" // change to your theme color
+                strokeWidth={2}
+                style={styles.logo}
               />
-            </View>
 
-            {/* Send OTP Button */}
-            <TouchableOpacity
-              style={[styles.button, isLoading && { opacity: 0.7 }]}
-              onPress={handleSendOTP}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>Send Verification Code</Text>
-              )}
-            </TouchableOpacity>
+              {/* Title */}
+              <Text style={styles.title}>Reset Your Password</Text>
 
-            {/* Back to Login */}
-            <TouchableOpacity
-              style={styles.backToLogin}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={styles.backToLoginText}>
-                Remember your password?{' '}
-                <Text style={styles.loginLink}>Login</Text>
+              {/* Description */}
+              <Text style={styles.description}>
+                Enter your email address and we'll send you a verification code
+                to reset your password
               </Text>
-            </TouchableOpacity>
+
+              {/* Email Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Email Address</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your email"
+                  placeholderTextColor="#999999"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!isLoading}
+                />
+              </View>
+
+              {/* Send OTP Button */}
+              <TouchableOpacity
+                style={[styles.button, isLoading && { opacity: 0.7 }]}
+                onPress={handleSendOTP}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.buttonText}>Send Verification Code</Text>
+                )}
+              </TouchableOpacity>
+
+              {/* Back to Login */}
+              <TouchableOpacity
+                style={styles.backToLogin}
+                onPress={() => navigation.navigate('Login')}
+              >
+                <Text style={styles.backToLoginText}>
+                  Remember your password?{' '}
+                  <Text style={styles.loginLink}>Login</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -172,24 +173,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 22,
-    paddingTop: 20,
+    paddingBottom: 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 40,
+  },
+  body: {
+    flex: 1,
+    justifyContent: 'center',
+    // Offsets the back-button row so the content sits at the visual centre.
+    marginTop: -40,
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerTitle: {
-    fontFamily: 'Satoshi-Bold',
-    fontSize: 18,
-    color: '#494949',
   },
   logo: {
     width: 90,
@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Satoshi-Bold',
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 22,
+    lineHeight: 28,
     color: '#494949',
     textAlign: 'center',
     marginBottom: 12,

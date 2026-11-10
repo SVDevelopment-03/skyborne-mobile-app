@@ -44,7 +44,7 @@ export function usePaymentViewModel() {
   const verifyPaymentStatus = useCallback(
     async (orderRef: string) => {
       try {
-        const result = await dispatch(checkPaymentStatus(orderRef));
+        const result = await dispatch(checkPaymentStatus({ orderRef }));
         
         if (result.meta.requestStatus === 'fulfilled') {
           return {

@@ -34,7 +34,7 @@ import { clearAllAppCache } from '../../store/clearCache';
 import { profileService } from '../../services/profileService';
 import { useDispatch } from 'react-redux';
 import { logout as logoutAction } from '../../store/authSlice';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 interface StatCard {
   id: number;
   value: string;
@@ -428,10 +428,7 @@ const ProfileScreen = () => {
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
-              <Image
-                style={styles.backIcon}
-                source={ProfileImages.ArrowIcon1}
-              />
+              <BackArrowIcon />
             </TouchableOpacity>
 
             <Text style={styles.headerTitle}>Profile</Text>

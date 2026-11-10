@@ -1,11 +1,25 @@
 import React from 'react';
-import { TextInput as RNInput, StyleSheet, View, TextInputProps } from 'react-native';
+import {
+  TextInput as RNInput,
+  StyleSheet,
+  View,
+  TextInputProps,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 
-export default function TextInput(props: TextInputProps & { value?: string }) {
-  const { style, placeholderTextColor, ...restProps } = props;
+export default function TextInput(
+  props: TextInputProps & {
+    value?: string;
+    // Overrides the wrapper (for example its 12px bottom margin) when a screen
+    // controls field spacing itself.
+    containerStyle?: StyleProp<ViewStyle>;
+  },
+) {
+  const { style, placeholderTextColor, containerStyle, ...restProps } = props;
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, containerStyle]}>
       <RNInput
         style={[styles.input, style]}
         placeholderTextColor={placeholderTextColor ?? '#999'}

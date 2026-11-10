@@ -11,7 +11,7 @@ import GradientBackground from '../../components/GradientBackground';
 import Button from '../../components/Button';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 const motivationOptions = [
   {
     id: 'reminders',
@@ -67,13 +67,7 @@ const OnboardingMotivationScreen = ({ navigation }: Props) => {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Image
-              source={{
-                uri: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/back-arrow.png',
-              }}
-              style={{ width: 16, height: 16, marginHorizontal: 16 }}
-              resizeMode="contain"
-            />
+            <BackArrowIcon style={{ marginHorizontal: 16 }} />
           </TouchableOpacity>
 
           <View style={styles.progressTrack}>

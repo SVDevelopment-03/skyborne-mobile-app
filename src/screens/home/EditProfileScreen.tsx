@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
-import { ChevronLeft, ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, Lock } from 'lucide-react-native';
 import TextInput from '../../components/TextInput';
 import Button from '../../components/Button';
 import { Country, State } from 'country-state-city';
@@ -166,7 +166,7 @@ const EditProfileScreen = ({ navigation }: Props) => {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
@@ -182,7 +182,7 @@ const EditProfileScreen = ({ navigation }: Props) => {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               styles.scrollContent,
-              { paddingBottom: 120 + insets.bottom },
+              { paddingBottom: 24 },
             ]}
           >
             {/* Profile Image Section */}
@@ -213,6 +213,8 @@ const EditProfileScreen = ({ navigation }: Props) => {
                     }
                   }}
                   placeholder="Enter first name"
+                  containerStyle={styles.fieldWrapper}
+                  style={styles.field}
                   editable={!isSubmitting}
                 />
                 {errors.firstName ? (
@@ -232,6 +234,8 @@ const EditProfileScreen = ({ navigation }: Props) => {
                     }
                   }}
                   placeholder="Enter last name"
+                  containerStyle={styles.fieldWrapper}
+                  style={styles.field}
                   editable={!isSubmitting}
                 />
                 {errors.lastName ? (
@@ -257,10 +261,7 @@ const EditProfileScreen = ({ navigation }: Props) => {
                     >
                       {country ? resolveCountryName(country) : 'Select an option'}
                     </Text>
-                    <Image
-                      source={IconImages?.downArrow}
-                      style={styles.dropdownIcon}
-                    />
+                    <ChevronDown size={18} color="#8A95A5" strokeWidth={2} />
                   </TouchableOpacity>
 
                   {showCountryDropdown && (
@@ -314,10 +315,7 @@ const EditProfileScreen = ({ navigation }: Props) => {
                           >
                             {stateName || 'Select an option'}
                           </Text>
-                          <Image
-                            source={IconImages?.downArrow}
-                            style={styles.dropdownIcon}
-                          />
+                          <ChevronDown size={18} color="#8A95A5" strokeWidth={2} />
                         </TouchableOpacity>
 
                         {showStateDropdown && (
@@ -349,6 +347,8 @@ const EditProfileScreen = ({ navigation }: Props) => {
                         value={stateName}
                         onChangeText={setStateName}
                         placeholder="Enter state"
+                  containerStyle={styles.fieldWrapper}
+                  style={styles.field}
                         editable={!isSubmitting}
                       />
                     )
@@ -360,10 +360,7 @@ const EditProfileScreen = ({ navigation }: Props) => {
                       <Text style={styles.dropdownPlaceholder}>
                         Select a country first
                       </Text>
-                      <Image
-                        source={IconImages?.downArrow}
-                        style={styles.dropdownIcon}
-                      />
+                      <ChevronDown size={18} color="#8A95A5" strokeWidth={2} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -381,6 +378,8 @@ const EditProfileScreen = ({ navigation }: Props) => {
                     }
                   }}
                   placeholder="Enter city"
+                  containerStyle={styles.fieldWrapper}
+                  style={styles.field}
                   editable={!isSubmitting}
                 />
                 {errors.city ? (
@@ -391,15 +390,11 @@ const EditProfileScreen = ({ navigation }: Props) => {
               {/* Email (Not Editable) */}
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email Address</Text>
-                <View style={styles.disabledInputContainer}>
-                  <TextInput
-                    value={user?.email ?? ''} 
-                    editable={false}
-                    style={styles.disabledInput}
-                  />
-                  <View style={styles.lockBadge}>
-                    <Text style={styles.lockIcon}>🔒</Text>
-                  </View>
+                <View style={styles.readOnlyField}>
+                  <Text style={styles.readOnlyText} numberOfLines={1}>
+                    {user?.email || email}
+                  </Text>
+                  <Lock size={16} color="#9CA3AF" strokeWidth={2} />
                 </View>
                 <Text style={styles.helperText}>
                   Email cannot be changed for security reasons
@@ -407,15 +402,18 @@ const EditProfileScreen = ({ navigation }: Props) => {
               </View>
             </View>
 
-            {/* Save Button */}
-            <View style={[styles.buttonContainer, { marginBottom: 24 + insets.bottom }]}>
-              <Button
-                title={isSubmitting ? 'Saving...' : 'Save Changes'}
-                onPress={handleSave}
-                disabled={isSubmitting}
-              />
-            </View>
           </ScrollView>
+
+          {/* Save Button */}
+          <View
+            style={[styles.footer, { paddingBottom: 12 + insets.bottom }]}
+          >
+            <Button
+              title={isSubmitting ? 'Saving...' : 'Save Changes'}
+              onPress={handleSave}
+              disabled={isSubmitting}
+            />
+          </View>
         </View>
       </SafeAreaView>
     </GradientBackground>
@@ -434,8 +432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 44,
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
   backButton: {
     width: 40,
@@ -498,10 +495,21 @@ const styles = StyleSheet.create({
     color: '#B95E82',
   },
   formSection: {
-    marginBottom: 20,
+    marginTop: 4,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 18,
+  },
+  fieldWrapper: {
+    marginBottom: 0,
+  },
+  field: {
+    height: 48,
+    paddingVertical: 0,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    fontFamily: FontFamilies.SatoshiMedium,
+    color: '#494949',
   },
   label: {
     fontSize: 14,
@@ -513,8 +521,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 48,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e6e6e6',
@@ -533,14 +541,9 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontFamily: FontFamilies.SatoshiMedium,
   },
-  dropdownIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#8A95A5',
-  },
   dropdownList: {
     position: 'absolute',
-    top: 50,
+    top: 48,
     width: '100%',
     maxHeight: 200,
     backgroundColor: '#FFFFFF',
@@ -562,27 +565,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F2F2F2',
   },
-  disabledInputContainer: {
-    position: 'relative',
-  },
-  disabledInput: {
-    opacity: 0.6,
+  readOnlyField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
     backgroundColor: '#F5F5F5',
   },
-  lockBadge: {
-    position: 'absolute',
-    right: 12,
-    top: '50%',
-    transform: [{ translateY: -10 }],
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FFE8E8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lockIcon: {
+  readOnlyText: {
+    flex: 1,
+    marginRight: 10,
     fontSize: 14,
+    color: '#8A8A8A',
+    fontFamily: FontFamilies.SatoshiMedium,
   },
   errorText: {
     color: '#EF4444',
@@ -593,11 +591,12 @@ const styles = StyleSheet.create({
   helperText: {
     color: '#9CA3AF',
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 6,
     fontFamily: FontFamilies.SatoshiRegular,
   },
-  buttonContainer: {
-    marginTop: 20,
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
   },
 });
 

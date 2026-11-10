@@ -19,7 +19,7 @@ import RNOtpVerify from 'react-native-otp-auto-fill';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { normalizeErrorMessage } from '../../utils/errorUtils';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 type Props = NativeStackScreenProps<RootStackParamList, 'OTP'>;
 
 export default function OTPVerificationScreen({ navigation, route }: Props) {
@@ -231,13 +231,7 @@ export default function OTPVerificationScreen({ navigation, route }: Props) {
     <GradientBackground>
       <View style={styles.appBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Image
-            source={{
-              uri: 'https://skyborne-images.s3.ap-south-1.amazonaws.com/back-arrow.png',
-            }}
-            style={{ width: 16, height: 16, marginHorizontal: 16 }}
-            resizeMode="contain"
-          />
+          <BackArrowIcon style={{ marginHorizontal: 16 }} />
         </TouchableOpacity>
 
         <View style={styles.appBarCenter}>

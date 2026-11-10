@@ -19,7 +19,7 @@ export default function WelcomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const handleGetStarted = () => {
     console.log('Get Started Pressed!');
-    navigation.navigate('AuthOptions');
+    navigation.navigate('Login');
   };
 
   return (
@@ -42,7 +42,9 @@ export default function WelcomeScreen({ navigation }: any) {
             {/* Content Section */}
             <View style={[styles.contentSection, { paddingBottom: 16 + insets.bottom }] }>
               {/* Headline */}
-              <Text style={styles.headline}>Welcome to Skyborne Drop</Text>
+              <Text style={styles.headline}>
+                Welcome to{'\n'}Skyborne Drop
+              </Text>
 
               {/* Subtitle */}
               <Text style={styles.subtitle}>
@@ -99,6 +101,7 @@ const styles = StyleSheet.create({
   headline: {
     fontFamily: FontFamilies.SatoshiBold,
     fontSize: 25,
+    lineHeight: 32,
     color: '#494949',
     textAlign: 'center',
     marginBottom: 13,

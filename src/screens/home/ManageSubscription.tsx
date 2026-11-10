@@ -29,7 +29,7 @@ import {
 import { appleIAPService, AppleProduct as AppleProductType } from '../../services/appleIAPService';
 import { profileService } from '../../services/profileService';
 import Toast from 'react-native-toast-message';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 interface BillingInfo {
   label: string;
   value: string;
@@ -538,10 +538,7 @@ const ManageSubscriptionsScreen = ({ navigation }: { navigation: any }) => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Image
-              style={styles.backIcon}
-              source={SubscriptionImages.backwardIcon}
-            />
+            <BackArrowIcon />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Manage Subscriptions</Text>
           <View style={styles.headerSpacer} />

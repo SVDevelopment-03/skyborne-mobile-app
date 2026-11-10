@@ -10,6 +10,8 @@ export const ExploreImages = {
   arrow: { uri: `${BASE_URL}/arrow.png` },
   yoga1: { uri: `${BASE_URL}/yoga1.png` },
   yoga2: { uri: `${BASE_URL}/yoga2.png` },
+  yoga3: { uri: `${BASE_URL}/yoga3.png` },
+  yoga4: { uri: `${BASE_URL}/yoga4.png` },
   yoga5: { uri: `${BASE_URL}/yoga5.png` },
 };
 

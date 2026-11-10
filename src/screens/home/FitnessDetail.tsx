@@ -9,12 +9,12 @@ import {
   Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, CircleCheck } from 'lucide-react-native';
 import { useSelector } from 'react-redux';
 import GradientBackground from '../../components/GradientBackground';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import { SubscriptionImages } from '../../assets/images/subscriptions';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 type FitnessDetailsNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'FitnessDetails'
@@ -99,10 +99,7 @@ const FitnessDetailsScreen: React.FC<FitnessDetailsScreenProps> = ({
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Image
-              style={styles.backIcon}
-              source={SubscriptionImages.backwardIcon}
-            />
+            <BackArrowIcon />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Fitness</Text>
           <View style={styles.headerSpacer} />
@@ -315,10 +312,7 @@ const FitnessDetailsScreen: React.FC<FitnessDetailsScreenProps> = ({
                   }
                 >
                   <View style={styles.featureCardHeader}>
-                    <Image
-                      source={{ uri: feature.icon }}
-                      style={styles.featureIcon}
-                    />
+                    <CircleCheck size={24} color="#B95E82" strokeWidth={2.25} />
                     <Text style={styles.featureCardTitle}>{feature.title}</Text>
                     <ChevronRight
                       size={20}

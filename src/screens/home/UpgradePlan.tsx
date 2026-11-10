@@ -31,7 +31,7 @@ import { fetchUserProfile } from '../../store/homeSlice';
 import { RootState } from '../../store';
 import { SubscriptionImages } from '../../assets/images/subscriptions';
 import { API_BASE_URL as APP_API_BASE_URL } from '../../constants/api';
-
+import BackArrowIcon from '../../components/BackArrowIcon';
 const API_BASE_URL = APP_API_BASE_URL;
 
 // ✅ COMPLETE PLAN CONFIGURATION WITH MONTHLY/YEARLY PRICING
@@ -634,10 +634,7 @@ const UpgradePlanScreen = ({ navigation }: { navigation: any }) => {
             onPress={() => navigation.goBack()}
             disabled={isProcessingPayment}
           >
-            <Image 
-              style={styles.backIcon} 
-              source={SubscriptionImages.backwardIcon} 
-            />
+            <BackArrowIcon />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.closeButtonHeader}
