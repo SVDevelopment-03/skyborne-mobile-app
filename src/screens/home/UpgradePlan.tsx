@@ -61,12 +61,12 @@ const PLAN_CONFIG = {
     monthly: {
       amount: 0,
       display: '',
-      sessions: '2 Yoga Classes per Month',
+      sessions: '4 Yoga Classes per Month',
     },
     yearly: {
       amount: 0,
       display: '',
-      sessions: '24 Yoga Classes per Year',
+      sessions: '48 Yoga Classes per Year',
       savings: '5% off',
     },
   },
@@ -78,12 +78,12 @@ const PLAN_CONFIG = {
     monthly: {
       amount: 0,
       display: '',
-      sessions: '2 Yoga + 1 Special per Month',
+      sessions: '4 Yoga + 1 Special per Month',
     },
     yearly: {
       amount: 0,
       display: '',
-      sessions: '24 Yoga + 12 Special per Year',
+      sessions: '48 Yoga + 12 Special per Year',
       savings: '5% off',
     },
   },
